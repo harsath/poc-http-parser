@@ -1,0 +1,4 @@
+### Plain-Old-C HTTP State-Machine parser
+Originally implemented for my internal use to play around with Linux and FreeBSD's networking interface for event-driven
+APIs, but I find myself using it ofter.
+It's a header-only C state-machine HTTP parser. You can just plug-in anywhere.
