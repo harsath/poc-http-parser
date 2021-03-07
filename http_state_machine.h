@@ -30,12 +30,19 @@
 #include <ctype.h>
 
 #define poc_str3cmp_macro(ptr, c0, c1, c2) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2
+__attribute__((always_inline))
 static inline bool poc_str3cmp(const char* ptr, const char* cmp){
 		return poc_str3cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2));
 }
 #define poc_str4cmp_macro(ptr, c0, c1, c2, c3) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && *(ptr+3) == c3
+__attribute__((always_inline))
 static inline bool poc_str4cmp(const char* ptr, const char* cmp){
 		return poc_str4cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3));
+}
+#define str5cmp_macro(ptr, c0, c1, c2, c3, c4) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && *(ptr+3) == c3 && *(ptr+4) == c4
+__attribute__((always_inline))
+static inline bool str5cmp(const char* ptr, const char* cmp){
+		return str5cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3),  *(cmp+4));
 }
 #define HEADER_VALUE_BUFFER_SIZE 100
 #define HEADER_NAME_BUFFER_SIZE 1024
@@ -46,9 +53,7 @@ enum ParserState {
 	// Request-Line
 	REQUEST_LINE_BEGIN = 100,
 	REQUEST_METHOD,
-	REQUEST_RESOURCE_BEGIN,
 	REQUEST_RESOURCE,
-	REQUEST_PROTOCOL_BEGIN,
 	REQUEST_PROTOCOL_H,
 	REQUEST_PROTOCOL_T1,
 	REQUEST_PROTOCOL_T2,
@@ -58,10 +63,7 @@ enum ParserState {
 	REQUEST_PROTOCOL_VERSION_MINOR,
 	REQUEST_LINE_LF,
 	// Message-Header
-	HEADER_NAME_BEGIN,
 	HEADER_NAME,
-	HEADER_NAME_COLON,
-	HEADER_VALUE_BEGIN,
 	HEADER_VALUE,
 	HEADER_VALUE_LF,
 	HEADER_VALUE_END,
@@ -76,101 +78,38 @@ enum LexConst {
 	CR = 0x0D, LF = 0x0A, SP = 0x20, HT = 0x09
 };
 
-enum RequestType {
-	GET, POST, HEAD, PUT, DELETE
-};
+typedef struct {
+	char header_name[HEADER_NAME_BUFFER_SIZE] = {0};
+	char header_value[HEADER_VALUE_BUFFER_SIZE] = {0};
+	size_t _header_name_current_index;
+	size_t _header_value_current_index;
+} poc_Header_Pair;
 
-struct poc_Header_Pair{
-	char header_name[HEADER_NAME_BUFFER_SIZE];
-	char header_value[HEADER_VALUE_BUFFER_SIZE];
-};
+typedef struct {
+	poc_Header_Pair* http_header_pairs;
+	size_t _total_headers_pairs = 0;
+	size_t _current_header_index = 0;
+} poc_Header;
 
-struct poc_Header{
-	struct poc_Header_Pair* http_header_pairs;
-	size_t remaining_memory;
-	size_t current_index = 0;
-};
-
-struct poc_Buffer{
+typedef struct {
 	char* buffer;
-	size_t remaining_memory;
-	size_t current_index = 0;
-};
+	size_t _remaining_memory = 0;
+	size_t _current_index = 0;
+} poc_Buffer;
 
-struct poc_HTTP_Version{
-	char buffer[HTTP_VERSION_BUFFER_SIZE];
-	size_t current_index;
-};
-
-struct poc_HTTP_Request_Message{
-	poc_Header* http_header;
+typedef struct {
+	poc_Header* http_headers;
 	poc_Buffer* http_message_body;
 	poc_Buffer* http_request_resource;
-	poc_HTTP_Version http_version;
-	RequestType http_request_type;
-};
+	poc_Buffer* http_version;
+	poc_Buffer* http_method;
+} poc_HTTP_Request_Message;
 
-static inline bool poc_http_message_add_header(
-		struct poc_HTTP_Request_Message* http_message, struct poc_Header_Pair* http_header){
-	if(((http_message->http_header->remaining_memory - http_message->http_header->current_index) <= 0))
-		return false;
-	memcpy(http_message->http_header->http_header_pairs[http_message->http_header->current_index].header_name,
-		http_header->header_name, HEADER_NAME_BUFFER_SIZE);
-	memcpy(http_message->http_header->http_header_pairs[http_message->http_header->current_index].header_value,
-		http_header->header_value, HEADER_VALUE_BUFFER_SIZE);
-	http_message->http_header->current_index++;
-	return true;
-}
-
-static inline bool poc_http_message_append_raw_body_bytes(
-		struct poc_HTTP_Request_Message* http_message, const char* value){
-	size_t remaining_memory = http_message->http_message_body->remaining_memory - http_message->http_message_body->current_index;
-	size_t value_length = strlen(value);
-	if((remaining_memory <= 0) && (value_length > remaining_memory))
-		return false;
-	memcpy(&http_message->http_message_body->buffer[http_message->http_message_body->current_index], value, value_length);
-	return true;
-}
-
-static inline bool poc_http_message_append_request_resource_bytes(
-		struct poc_HTTP_Request_Message* http_message, const char* value){
-	size_t remaining_memory = http_message->http_request_resource->remaining_memory 
-					- http_message->http_request_resource->current_index;
-	size_t value_length = strlen(value);
-	if((remaining_memory <= 0) && (value_length > remaining_memory))
-		return false;
-	memcpy(&http_message->http_request_resource->buffer[http_message->http_request_resource->current_index], value, value_length);
-	return true;
-}
-
-__attribute__((always_inline))
-static inline bool poc_http_message_initilize_http_version(struct poc_HTTP_Request_Message* http_message, const char* value){
-	size_t value_size = strlen(value);
-	if(((http_message->http_version.current_index + value_size) >= HTTP_VERSION_BUFFER_SIZE))
-		return false;
-	memcpy(&http_message->http_version.buffer[http_message->http_version.current_index], value, value_size);
-	return true;
-}
-
-static inline struct poc_Header* poc_allocate_http_header(size_t num_header){
-	struct poc_Header* http_header = (struct poc_Header*)malloc(sizeof(poc_Header));
-	http_header->http_header_pairs = (struct poc_Header_Pair*)malloc(sizeof(poc_Header_Pair)*num_header);
-	http_header->remaining_memory = num_header;
-	for(size_t i = 0; i < num_header; i++){
-		memset(http_header->http_header_pairs[i].header_name, 0, HEADER_NAME_BUFFER_SIZE);
-		memset(http_header->http_header_pairs[i].header_value, 0, HEADER_VALUE_BUFFER_SIZE);
-	}
+static inline poc_Header* poc_allocate_http_header(size_t num_header){
+	poc_Header* http_header = (poc_Header*)malloc(sizeof(poc_Header));
+	http_header->http_header_pairs = (poc_Header_Pair*)malloc(sizeof(poc_Header_Pair)*num_header);
+	http_header->_total_headers_pairs = num_header;
 	return http_header;
-}
-
-__attribute__((always_inline))
-static inline bool _poc_is_char(char value){
-	return (unsigned)value <= 127;
-}
-
-__attribute__((always_inline))
-static inline bool _poc_is_control(char value){
-	return (value >= 0 && value <= 31) || (value == 127);
 }
 
 __attribute__((always_inline))
@@ -201,124 +140,130 @@ static inline bool _poc_is_seperator(char value){
 	}
 }
 
-__attribute__((always_inline))
-static inline bool _poc_is_token(char value){
-	return _poc_is_char(value) && !(_poc_is_control(value) || _poc_is_seperator(value));
-}
+#define POC_IS_CHAR(CHAR_VALUE) ((unsigned) CHAR_VALUE <= 127)
+#define POC_IS_CONTROL(CHAR_VALUE) (CHAR_VALUE >= 0 && CHAR_VALUE <= 31) || (CHAR_VALUE == 127)
+#define POC_IS_TOKEN(CHAR_VALUE) POC_IS_CHAR(CHAR_VALUE) && !(POC_IS_CONTROL(CHAR_VALUE) || _poc_is_seperator(CHAR_VALUE))
+#define POC_IS_TEXT(CHAR_VALUE) !POC_IS_CONTROL(CHAR_VALUE) || (CHAR_VALUE == (char)SP) || (CHAR_VALUE == HT)
 
-__attribute__((always_inline))
-static inline bool _poc_is_text(char value){
-	// Any bytes except Control characters
-	return !_poc_is_control(value) || (value == (char)SP) || (value == HT);
-}
+static inline bool poc_http_state_machine_parser(
+		 poc_HTTP_Request_Message* http_message, ParserState* current_state, const char* input_buffer, size_t buffer_size){
 
-__attribute__((always_inline))
-static inline char* poc_get_header_value(){}
+#define POC_APPEND_CHAR_MESSAGE_BUFFER(HTTP_MESSAGE, BUFFER_TYPE, CHAR_VALUE)					\
+	do{													\
+		if(HTTP_MESSAGE->BUFFER_TYPE->_current_index > 							\
+				HTTP_MESSAGE->BUFFER_TYPE->_remaining_memory)					\
+			return false;										\
+		HTTP_MESSAGE->BUFFER_TYPE->buffer[HTTP_MESSAGE->BUFFER_TYPE->_current_index] = CHAR_VALUE;  	\
+		HTTP_MESSAGE->BUFFER_TYPE->_current_index++;							\
+	}while(0)												\
 
-// Things which are pre-fixed with 'p' means, it will be changed by the parser
-//  'http_state_machine_parser' assumes that there will be enough memory to hold message data
-static inline void poc_http_state_machine_parser(
-		struct poc_HTTP_Request_Resource* http_message, ParserState* current_state, const char* input_buffer, size_t buffer_size){
+#define POC_APPEND_CHAR_HEADER_NAME(HTTP_MESSAGE, CHAR_VALUE)									      \
+	do{ 															      \
+		if(HTTP_MESSAGE->http_headers->_current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs)	      \
+			return false;												      \
+		size_t current_header_index = HTTP_MESSAGE->http_headers->_current_header_index;                     		      \
+		size_t current_header_name_index = HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]                \
+							._header_name_current_index;                                                  \
+		if(current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs) return false;                             \
+		if(current_header_name_index > HEADER_NAME_BUFFER_SIZE) return false;                                                 \
+		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index].header_name[current_header_name_index]=CHAR_VALUE;\
+	}while(0)
+
+
+#define POC_APPEND_CHAR_HEADER_VALUE(HTTP_MESSAGE, CHAR_VALUE)									      \
+	do{ 															      \
+		if(HTTP_MESSAGE->http_headers->_current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs)	      \
+			return false;												      \
+		size_t current_header_index = HTTP_MESSAGE->http_headers->_current_header_index;                     		      \
+		size_t current_header_value_index = HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]               \
+							._header_value_current_index;                                                 \
+		if(current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs) return false;                             \
+		if(current_header_value_index > HEADER_NAME_BUFFER_SIZE) return false;                                                \
+		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index].header_value[current_header_value_index]=CHAR_VALUE; \
+	}while(0)
+
+#define POC_INCREMENT_CURRENT_HEADER_PAIR_INDEX(HTTP_MESSAGE) HTTP_MESSAGE->http_headers->_current_header_index++
+
 	bool is_protocol_fail = false;
 	const char* buffer_end = &input_buffer[buffer_size];
 	while(!is_protocol_fail && (input_buffer != buffer_end)){
 		switch(*current_state){
 			case REQUEST_LINE_BEGIN:
-				if(_poc_is_token(*input_buffer)){
+				if(POC_IS_TOKEN(*input_buffer)){
 					*current_state = REQUEST_METHOD;
-					*request_method_p = *input_buffer;
-					request_method_p++;
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_method, *input_buffer);
 					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_METHOD:
 				if(*input_buffer == (char)SP){
-					*current_state = REQUEST_RESOURCE_BEGIN;
+					*current_state = REQUEST_RESOURCE;
 					input_buffer++;
-				}else if(_poc_is_token(*input_buffer)){
-					*request_method_p = *input_buffer;
-					request_method_p++;
+				}else if(POC_IS_TOKEN(*input_buffer)){
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_method, *input_buffer);
 					input_buffer++;
 				}else{
 					*current_state = PROTOCOL_ERROR;
 				}
 				break;
-			case REQUEST_RESOURCE_BEGIN:
-				if(isprint(*input_buffer)){
-					*current_state = REQUEST_RESOURCE;
-				}else{ *current_state = PROTOCOL_ERROR; }
-				break;
 			case REQUEST_RESOURCE:
 				if(*input_buffer == (char)SP){
 					// We parsed the request-resource, Let's parse the protocol version
-					*current_state = REQUEST_PROTOCOL_BEGIN;
-				}else if(isprint(*input_buffer)){
-					*request_resource_p = *input_buffer;
-					request_resource_p++;
+					*current_state = REQUEST_PROTOCOL_H;
 					input_buffer++;
-				}else{ *current_state = PROTOCOL_ERROR; }
-				break;
-			case REQUEST_PROTOCOL_BEGIN:
-				if(*input_buffer == (char)SP){
+				}else if(isprint(*input_buffer)){
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_request_resource, *input_buffer);
 					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_H:
 				if(*input_buffer == 'H'){
-					*http_version_p = 'H';
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, 'H');
 					*current_state = REQUEST_PROTOCOL_T1;
-					http_version_p++;
-					buffer_end++;
+					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_T1:
 				if(*input_buffer == 'T'){
-					*http_version_p = 'T';
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, 'T');
 					*current_state = REQUEST_PROTOCOL_T2;
-					http_version_p++;
-					buffer_end++;
+					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_T2:
 				if(*input_buffer == 'T'){
-					*http_version_p = 'T';
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, 'T');
 					*current_state = REQUEST_PROTOCOL_P;
-					http_version_p++;
-					buffer_end++;
+					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_P:
 				if(*input_buffer == 'P'){
-					*http_version_p = 'P';
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, 'P');
 					*current_state = REQUEST_PROTOCOL_SLASH;
-					http_version_p++;
-					buffer_end++;
+					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_SLASH:
 				if(*input_buffer == '/'){
-					*http_version_p = '/';
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, '/');
 					*current_state = REQUEST_PROTOCOL_VERSION_MAJOR;
-					http_version_p++;
-					buffer_end++;
+					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_VERSION_MAJOR:
 				if(isdigit(*input_buffer)){
-					*http_version_p = *input_buffer;
-					http_version_p++;
-					buffer_end++;
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, *input_buffer);
+					input_buffer++;
 				}else if(*input_buffer == '.'){
-					*http_version_p = '.';
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, '.');
 					*current_state = REQUEST_PROTOCOL_VERSION_MINOR;
-					http_version_p++;
 					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case REQUEST_PROTOCOL_VERSION_MINOR:
 				if(isdigit(*input_buffer)){
-					*http_version_p = *input_buffer;
-					http_version_p++;
+					POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_version, *input_buffer);
 					input_buffer++;
 				}else if(*input_buffer == (char)CR){
 					*current_state = REQUEST_LINE_LF;
@@ -327,36 +272,15 @@ static inline void poc_http_state_machine_parser(
 				break;
 			case REQUEST_LINE_LF:
 				if(*input_buffer == (char)LF){
-					*current_state = HEADER_NAME_BEGIN;
-					input_buffer++;
-				}else{ *current_state = PROTOCOL_ERROR; }
-				break;
-			case HEADER_NAME_BEGIN:
-				if(_poc_is_token(*input_buffer)){
-					_poc_append_byte_to_header(header_container_p, header_container_start_index_p,
-							*input_buffer, true, header_name_index, header_value_index);
 					*current_state = HEADER_NAME;
-					input_buffer++;
-				}else if(*input_buffer == (char)CR){
-					*current_state = HEADER_END_LF;
 					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case HEADER_NAME:
-				if(_poc_is_token(*input_buffer)){
-					_poc_append_byte_to_header(header_container_p, header_container_start_index_p,
-							*input_buffer, true, header_name_index, header_value_index);
+				if(POC_IS_TOKEN(*input_buffer)){
+					POC_APPEND_CHAR_HEADER_NAME(http_message, *input_buffer);
 					input_buffer++;
 				}else if(*input_buffer == ':'){
-					*current_state = HEADER_VALUE_BEGIN;
-					*header_name_index = 0;
-					input_buffer++;
-				}else{ *current_state = PROTOCOL_ERROR; }
-				break;
-			case HEADER_VALUE_BEGIN:
-				if(_poc_is_text(*input_buffer)){
-					_poc_append_byte_to_header(header_container_p, header_container_start_index_p,
-							*input_buffer, false, header_name_index, header_value_index);
 					*current_state = HEADER_VALUE;
 					input_buffer++;
 				}else if(*input_buffer == (char)CR){
@@ -368,9 +292,8 @@ static inline void poc_http_state_machine_parser(
 				if(*input_buffer == (char)CR){
 					*current_state = HEADER_VALUE_LF;
 					input_buffer++;
-				}else if(_poc_is_text(*input_buffer)){
-					_poc_append_byte_to_header(header_container_p, header_container_start_index_p,
-							*input_buffer, false, header_name_index, header_value_index);
+				}else if(POC_IS_TEXT(*input_buffer)){
+					POC_APPEND_CHAR_HEADER_VALUE(http_message, *input_buffer);
 					input_buffer++;
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
@@ -381,21 +304,30 @@ static inline void poc_http_state_machine_parser(
 				}else{ *current_state = PROTOCOL_ERROR; }
 				break;
 			case HEADER_VALUE_END:
-				(*header_container_start_index_p)++;
-				*header_name_index = 0;		
-				*header_value_index = 0;
-				*current_state = HEADER_NAME_BEGIN;
+				POC_INCREMENT_CURRENT_HEADER_PAIR_INDEX(http_message);
+				*current_state = HEADER_NAME;
 				break;
 			case HEADER_END_LF:
 				if(*input_buffer == (char)LF){
-					if(poc_str3cmp(request_method_p, "GET")){
-						*current_state = PARSING_DONE;
-					}else if(poc_str4cmp(request_method_p, "POST")){
-
+					if(poc_str3cmp(http_message->http_method->buffer, "GET")){
+						goto FINISH;
+					}else if(poc_str4cmp(http_message->http_method->buffer, "POST")){
+						goto FINISH;
+					}else{
+						goto FINISH;
 					}
 				}
+				break;
+			case PARSING_DONE:
+				goto FINISH;
+			case PROTOCOL_ERROR:
+				return false;
+			default:
+				printf("\ndefault\n");
 		}
 	}
+FINISH:
+	return true;
 }
 
 #endif
