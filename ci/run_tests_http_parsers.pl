@@ -9,6 +9,7 @@ sub run_tests {
 	mkdir($build_dir_name);
 	chdir($build_dir_name);
 	system(qq/cmake -GNinja .. && ninja/);
+	system(qq/.\/poc_http_parser_tests/);
 }
 
 run_tests();
