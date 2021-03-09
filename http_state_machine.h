@@ -43,11 +43,12 @@ __attribute__((always_inline))
 static inline bool str5cmp(const unsigned char* ptr, const unsigned char* cmp){
 		return str5cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3),  *(cmp+4));
 }
+#define POC_ALLOCATOR(num_of_elements, size_of_single_type) calloc(num_of_elements, size_of_single_type)
 #define HEADER_VALUE_BUFFER_SIZE 100
 #define HEADER_NAME_BUFFER_SIZE 1024
 #define HTTP_VERSION_BUFFER_SIZE 8
 
-enum ParserState { 
+typedef enum { 
 	PROTOCOL_ERROR,
 	// Request-Line
 	REQUEST_LINE_BEGIN = 100,
@@ -71,49 +72,49 @@ enum ParserState {
 	MESSAGE_BODY,
 	// Final state
 	PARSING_DONE
-};
+} ParserState;
 
-enum LexConst { 
+typedef enum { 
 	CR = 0x0D, LF = 0x0A, SP = 0x20, HT = 0x09
-};
+} LexConst;
 
 typedef struct {
-	char header_name[HEADER_NAME_BUFFER_SIZE] = {0};
-	char header_value[HEADER_VALUE_BUFFER_SIZE] = {0};
-	size_t _header_name_current_index = 0;
-	size_t _header_value_current_index = 0;
+	char header_name[HEADER_NAME_BUFFER_SIZE];
+	char header_value[HEADER_VALUE_BUFFER_SIZE];
+	size_t _header_name_current_index;
+	size_t _header_value_current_index;
 } poc_Header_Pair;
 
 typedef struct {
 	poc_Header_Pair* http_header_pairs;
-	size_t _total_headers_pairs = 0;
-	size_t _current_header_index = 0;
+	size_t _total_headers_pairs;
+	size_t _current_header_index;
 } poc_Header;
 
 typedef struct {
 	unsigned char* buffer;
-	size_t _remaining_memory = 0;
-	size_t _current_index = 0;
+	size_t _remaining_memory;
+	size_t _current_index;
 } poc_Buffer;
 
 typedef struct {
 	poc_Header* http_headers;
-	poc_Buffer* http_message_body;
 	poc_Buffer* http_request_resource;
 	poc_Buffer* http_version;
 	poc_Buffer* http_method;
+	poc_Buffer* http_message_body;
 } poc_HTTP_Request_Message;
 
 static inline poc_Header* poc_allocate_http_header(size_t num_header){
-	poc_Header* http_header = (poc_Header*)malloc(sizeof(poc_Header));
-	http_header->http_header_pairs = (poc_Header_Pair*)malloc(sizeof(poc_Header_Pair)*num_header);
+	poc_Header* http_header = (poc_Header*)POC_ALLOCATOR(1, sizeof(poc_Header));
+	http_header->http_header_pairs = (poc_Header_Pair*)POC_ALLOCATOR(num_header, sizeof(poc_Header_Pair));
 	http_header->_total_headers_pairs = num_header;
 	return http_header;
 }
 
 static inline poc_Buffer* poc_allocate_buffer(size_t buffer_size){
-	poc_Buffer* buffer = (poc_Buffer*)malloc(sizeof(poc_Buffer));
-	buffer->buffer = (unsigned char*)malloc(sizeof(unsigned char) * buffer_size);
+	poc_Buffer* buffer = (poc_Buffer*)POC_ALLOCATOR(1, sizeof(poc_Buffer));
+	buffer->buffer = (unsigned char*)POC_ALLOCATOR(1, sizeof(unsigned char) * buffer_size);
 	buffer->_remaining_memory = buffer_size;
 	return buffer;
 }
@@ -121,7 +122,7 @@ static inline poc_Buffer* poc_allocate_buffer(size_t buffer_size){
 static inline poc_HTTP_Request_Message* poc_allocate_http_request_message(
 	size_t num_header, size_t message_body_buffer_size, size_t request_resource_buffer_Size,
 	size_t  http_version_buffer_size, size_t http_method_buffer_size){
-	poc_HTTP_Request_Message* http_request_message = (poc_HTTP_Request_Message*)malloc(sizeof(poc_HTTP_Request_Message));
+	poc_HTTP_Request_Message* http_request_message = (poc_HTTP_Request_Message*)POC_ALLOCATOR(1, sizeof(poc_HTTP_Request_Message));
 	http_request_message->http_headers = poc_allocate_http_header(num_header);
 	http_request_message->http_message_body = poc_allocate_buffer(message_body_buffer_size);
 	http_request_message->http_request_resource = poc_allocate_buffer(request_resource_buffer_Size);
@@ -130,16 +131,19 @@ static inline poc_HTTP_Request_Message* poc_allocate_http_request_message(
 	return http_request_message;
 }
 
+__attribute__((always_inline))
 static inline void poc_free_buffer(poc_Buffer* buffer){
 	free(buffer->buffer);
 	free(buffer);
 }
 
+__attribute__((always_inline))
 static inline void poc_free_header(poc_Header* http_header){
 	free(http_header->http_header_pairs);
 	free(http_header);
 }
 
+__attribute__((always_inline))
 static inline void poc_free_http_request_message(poc_HTTP_Request_Message* http_message){
 	poc_free_buffer(http_message->http_message_body);
 	poc_free_buffer(http_message->http_method);
@@ -188,7 +192,7 @@ static inline bool poc_http_state_machine_parser(
 
 #define POC_APPEND_CHAR_MESSAGE_BUFFER(HTTP_MESSAGE, BUFFER_TYPE, CHAR_VALUE)					\
 	do{													\
-		if(HTTP_MESSAGE->BUFFER_TYPE->_current_index > 							\
+		if(HTTP_MESSAGE->BUFFER_TYPE->_current_index >= 						\
 				HTTP_MESSAGE->BUFFER_TYPE->_remaining_memory)					\
 			return false;										\
 		HTTP_MESSAGE->BUFFER_TYPE->buffer[HTTP_MESSAGE->BUFFER_TYPE->_current_index] = CHAR_VALUE;  	\
@@ -198,28 +202,27 @@ static inline bool poc_http_state_machine_parser(
 #define POC_APPEND_CHAR_HEADER_NAME(HTTP_MESSAGE, CHAR_VALUE)									      \
 	do{ 															      \
 		size_t current_header_index = HTTP_MESSAGE->http_headers->_current_header_index;                     		      \
-		if(current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs)	      				      \
+		if(current_header_index >= HTTP_MESSAGE->http_headers->_total_headers_pairs)	      				      \
 			return false;												      \
 		size_t current_header_name_index = HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]                \
 							._header_name_current_index;                                                  \
-		if(current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs) return false;                             \
-		if(current_header_name_index > HEADER_NAME_BUFFER_SIZE) return false;                                                 \
+		if(current_header_index >= HTTP_MESSAGE->http_headers->_total_headers_pairs) return false;                            \
+		if(current_header_name_index >= HEADER_NAME_BUFFER_SIZE) return false;                                                \
 		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index].header_name[current_header_name_index]=CHAR_VALUE;\
 		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]._header_name_current_index++;		      \
 	}while(0)
 
-
-#define POC_APPEND_CHAR_HEADER_VALUE(HTTP_MESSAGE, CHAR_VALUE)									      \
-	do{ 															      \
-		size_t current_header_index = HTTP_MESSAGE->http_headers->_current_header_index;                     		      \
-		if(current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs)	                                      \
-			return false;												      \
-		size_t current_header_value_index = HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]               \
-							._header_value_current_index;                                                 \
-		if(current_header_index > HTTP_MESSAGE->http_headers->_total_headers_pairs) return false;                             \
-		if(current_header_value_index > HEADER_NAME_BUFFER_SIZE) return false;                                                \
-		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index].header_value[current_header_value_index]=CHAR_VALUE;\
-		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]._header_value_current_index++;		      \
+#define POC_APPEND_CHAR_HEADER_VALUE(HTTP_MESSAGE, CHAR_VALUE)									         \
+	do{ 															      	 \
+		size_t current_header_index = HTTP_MESSAGE->http_headers->_current_header_index;                     		         \
+		if(current_header_index >= HTTP_MESSAGE->http_headers->_total_headers_pairs)	                                         \
+			return false;												         \
+		size_t current_header_value_index = HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]                  \
+							._header_value_current_index;                                                    \
+		if(current_header_index >= HTTP_MESSAGE->http_headers->_total_headers_pairs) return false;                               \
+		if(current_header_value_index >= HEADER_NAME_BUFFER_SIZE) return false;                                                  \
+		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index].header_value[current_header_value_index]=CHAR_VALUE; \
+		HTTP_MESSAGE->http_headers->http_header_pairs[current_header_index]._header_value_current_index++;		         \
 	}while(0)
 
 #define POC_INCREMENT_CURRENT_HEADER_PAIR_INDEX(HTTP_MESSAGE) HTTP_MESSAGE->http_headers->_current_header_index++
@@ -362,6 +365,7 @@ static inline bool poc_http_state_machine_parser(
 				}
 				break;
 			case MESSAGE_BODY:
+				if(input_buffer+1 == buffer_end){ *current_state = PARSING_DONE; }
 				POC_APPEND_CHAR_MESSAGE_BUFFER(http_message, http_message_body, *input_buffer);
 				input_buffer++;
 				break;
