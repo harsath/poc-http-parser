@@ -84,7 +84,7 @@ typedef struct {
 	char header_name[HEADER_NAME_BUFFER_SIZE];
 	char header_value[HEADER_VALUE_BUFFER_SIZE];
 	size_t header_name_current_index;
-	size_t header_value_curent_index;
+	size_t header_value_current_index;
 } poc_Header_Pair;
 
 typedef struct {
@@ -116,7 +116,7 @@ static inline poc_Header* poc_allocate_http_header(size_t number_of_headers){
 		memset(http_header->http_header_pairs[i].header_name, 0, HEADER_NAME_BUFFER_SIZE);
 		memset(http_header->http_header_pairs[i].header_value, 0, HEADER_VALUE_BUFFER_SIZE);
 		http_header->http_header_pairs[i].header_name_current_index = 0;
-		http_header->http_header_pairs[i].header_value_curent_index = 0;
+		http_header->http_header_pairs[i].header_value_current_index = 0;
 	}
 	return http_header;
 }
@@ -219,6 +219,22 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 		*header_name_current_index++; 											\
 	} while(0) 
 
+#define POC_APPEND_CHAR_TO_HEADER_VALUE(CHAR_VALUE, header)									\
+	do { 															\
+		size_t* header_value_current_index = &header->http_header_pairs[header->current_index]				\
+								.header_value_current_index; 					\
+		if(header->current_index >= header->total_header_pair){ 							\
+			*http_parser_error = ERROR_BUFFER_OVERFLOW; 								\
+			return false; 												\
+		} 														\
+		if(*header_value_current_index >= HEADER_VALUE_BUFFER_SIZE){ 							\
+			*http_parser_error = ERROR_BUFFER_OVERFLOW; 								\
+			return false; 												\
+		} 														\
+		header->http_header_pairs[header->current_index].header_value[*header_value_current_index] = CHAR_VALUE; 	\
+		*header_value_current_index++; 											\
+	} while(0)
+
 #define POC_PROTOCOL_ERROR_HANDLER() *http_parser_error = ERROR_PROTOCOL_ERROR; return false
 
 	CHECK_IF_GET(raw_input_buffer);
@@ -259,20 +275,47 @@ PARSE_HTTP_HEADERS:
 				if(*raw_input_buffer == (char)CR){
 					raw_input_buffer++;
 					current_buffer_index++;
-					current_state = _HEADER_LF;
+					current_state = _HEADER_CR;
 				}else if(*raw_input_buffer == (char)SP){
 					raw_input_buffer++;
 					current_buffer_index++;
 				}else if(POC_IS_TEXT(*raw_input_buffer)){
-					// TODO: implement this...					
-				}
+					POC_APPEND_CHAR_TO_HEADER_VALUE(*raw_input_buffer, http_header);
+					raw_input_buffer++;
+					current_buffer_index++;
+				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
+				break;
+			case _HEADER_CR:
+				if(*raw_input_buffer == (char)LF){
+					raw_input_buffer++;
+					current_buffer_index++;
+					current_state = _HEADER_LF;
+				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
+				break;
+			case _HEADER_LF:
+				if(*raw_input_buffer == (char)CR){
+					raw_input_buffer++;
+					current_buffer_index++;
+					current_state = _HEADER_END;
+				}else if(POC_IS_TOKEN(*raw_input_buffer)){
+					http_header->current_index++;
+					current_state = _HEADER_NAME;
+				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
+				break;
+			case _HEADER_END:
+				goto PARSE_HTTP_BODY;
 		}	
 	}
 
 PARSE_HTTP_BODY:
-
+	size_t total_remaining_size = (input_buffer_size-1) - current_buffer_index;
+	if(total_remaining_size >= http_body->total_memory){
+		*http_parser_error = ERROR_BUFFER_OVERFLOW;
+		return false;
+	}
+	memcpy(http_body->buffer, &raw_input_buffer[current_buffer_index], total_remaining_size);
+	return true;
 }
-
 
 
 #endif
