@@ -57,26 +57,26 @@ static inline bool str10cmp(const char* ptr, const char* cmp){
 }
 
 typedef enum {
-	POC_HTTP_GET,
+	POC_HTTP_GET = 10,
 	POC_HTTP_POST,
 	POC_HTTP_PUT,
 	POC_HTTP_DELETE,
 	POC_HTTP_HEAD,
-} poc_Http_Method;
+} poc_HTTP_Method;
 
 typedef enum {
 	CR = 0x0D, LF = 0x0A, SP = 0x20, HT = 0x09
 } LexConst;
 
 typedef enum {
-	ERROR_UNSUPPORTED_HTTP_METHOD,
+	ERROR_UNSUPPORTED_HTTP_METHOD=10,
 	ERROR_UNSUPPORTED_HTTP_VERSION,
 	ERROR_PROTOCOL_ERROR,
 	ERROR_BUFFER_OVERFLOW
 } poc_Parser_Error;
 
 typedef enum {
-	HTTP_1_1,
+	HTTP_1_1=10,
 	HTTP_1_0
 } poc_HTTP_Version;
 
@@ -132,16 +132,17 @@ static inline poc_Header* poc_allocate_http_header(size_t number_of_headers){
 #define POC_IS_TOKEN(CHAR_VALUE) (POC_IS_CHAR(CHAR_VALUE) && !(POC_IS_CONTROL(CHAR_VALUE) || POC_IS_SEPERATOR(CHAR_VALUE)))
 #define POC_IS_TEXT(CHAR_VALUE) (!POC_IS_CONTROL(CHAR_VALUE) || (CHAR_VALUE) == (char)SP || (CHAR_VALUE) == HT)
 
-static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_header, size_t* num_header, const char* raw_input_buffer, 
-					size_t input_buffer_size, poc_Http_Method* http_method, char** request_resource, 
+static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_header, const char* raw_input_buffer, 
+					size_t input_buffer_size, poc_HTTP_Method* http_method, char* request_resource, 
 					poc_HTTP_Version* http_version, poc_Parser_Error* http_parser_error){
 	size_t current_buffer_index = 0;
+#define POC_INCREMENT_BUFFER_OFFSET(offset_length) raw_input_buffer += offset_length; current_buffer_index += offset_length
+
 #define CHECK_IF_GET(input_buffer)		 										\
 	do {															\
 	if(str4cmp(input_buffer, "GET ")){											\
 		*http_method = POC_HTTP_GET;											\
-		input_buffer += 4;												\
-		current_buffer_index += 4;											\
+		POC_INCREMENT_BUFFER_OFFSET(4);											\
 		goto PARSE_HTTP_REQUEST_METHOD;											\
 	}															\
 	} while(0)
@@ -150,8 +151,7 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 	do {															\
 	if(str5cmp(input_buffer, "POST ")){											\
 		*http_method = POC_HTTP_POST;											\
-		input_buffer += 5;												\
-		current_buffer_index += 5;											\
+		POC_INCREMENT_BUFFER_OFFSET(5);											\
 		goto PARSE_HTTP_REQUEST_METHOD;											\
 	}															\
 	} while(0)
@@ -160,8 +160,7 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 	do {															\
 	if(str5cmp(input_buffer, "HEAD ")){											\
 		*http_method = POC_HTTP_HEAD;											\
-		input_buffer += 5;												\
-		current_buffer_index += 5;											\
+		POC_INCREMENT_BUFFER_OFFSET(5);											\
 		goto PARSE_HTTP_REQUEST_METHOD;											\
 	}															\
 	} while(0)
@@ -170,8 +169,7 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 	do {															\
 	if(str4cmp(input_buffer, "PUT ")){											\
 		*http_method = POC_HTTP_PUT;											\
-		input_buffer += 4;												\
-		current_buffer_index += 4;											\
+		POC_INCREMENT_BUFFER_OFFSET(4);											\
 		goto PARSE_HTTP_REQUEST_METHOD;											\
 	}															\
 	} while(0)
@@ -180,8 +178,7 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 	do {															\
 	if(str7cmp(input_buffer, "DELETE ")){											\
 		*http_method = POC_HTTP_PUT;											\
-		input_buffer += 7;												\
-		current_buffer_index += 7;											\
+		POC_INCREMENT_BUFFER_OFFSET(7);											\
 		goto PARSE_HTTP_REQUEST_METHOD;											\
 	}															\
 	} while(0)
@@ -196,7 +193,7 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 	do {															\
 	if(str10cmp(input_buffer, "HTTP/1.1\r\n")){										\
 		*http_version = HTTP_1_1;											\
-		input_buffer += 10;												\
+		POC_INCREMENT_BUFFER_OFFSET(10);										\
 		goto PARSE_HTTP_HEADERS;											\
 	}else{															\
 		*http_parser_error = ERROR_UNSUPPORTED_HTTP_VERSION;								\
@@ -206,33 +203,31 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 
 #define POC_APPEND_CHAR_TO_HEADER_NAME(CHAR_VALUE, header)									\
 	do {															\
-		size_t* header_name_current_index = &header->http_header_pairs[header->current_index].header_name_current_index;\
+		size_t header_name_current_index = header->http_header_pairs[header->current_index].header_name_current_index++;\
 		if(header->current_index >= header->total_header_pair){								\
 			*http_parser_error = ERROR_BUFFER_OVERFLOW; 								\
 			return false;												\
 		}														\
-		if(*header_name_current_index >= HEADER_NAME_BUFFER_SIZE){							\
+		if(header_name_current_index >= HEADER_NAME_BUFFER_SIZE){							\
 			*http_parser_error = ERROR_BUFFER_OVERFLOW;								\
 			return false;												\
 		}														\
-		header->http_header_pairs[header->current_index].header_name[*header_name_current_index] = CHAR_VALUE;		\
-		*header_name_current_index++; 											\
+		header->http_header_pairs[header->current_index].header_name[header_name_current_index] = CHAR_VALUE;		\
 	} while(0) 
 
 #define POC_APPEND_CHAR_TO_HEADER_VALUE(CHAR_VALUE, header)									\
 	do { 															\
-		size_t* header_value_current_index = &header->http_header_pairs[header->current_index]				\
-								.header_value_current_index; 					\
+		size_t header_value_current_index = header->http_header_pairs[header->current_index]				\
+								.header_value_current_index++; 					\
 		if(header->current_index >= header->total_header_pair){ 							\
 			*http_parser_error = ERROR_BUFFER_OVERFLOW; 								\
 			return false; 												\
 		} 														\
-		if(*header_value_current_index >= HEADER_VALUE_BUFFER_SIZE){ 							\
+		if(header_value_current_index >= HEADER_VALUE_BUFFER_SIZE){ 							\
 			*http_parser_error = ERROR_BUFFER_OVERFLOW; 								\
 			return false; 												\
 		} 														\
-		header->http_header_pairs[header->current_index].header_value[*header_value_current_index] = CHAR_VALUE; 	\
-		*header_value_current_index++; 											\
+		header->http_header_pairs[header->current_index].header_value[header_value_current_index] = CHAR_VALUE; 	\
 	} while(0)
 
 #define POC_PROTOCOL_ERROR_HANDLER() *http_parser_error = ERROR_PROTOCOL_ERROR; return false
@@ -246,76 +241,72 @@ static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_heade
 	
 PARSE_HTTP_REQUEST_METHOD:
 	while(*raw_input_buffer != (char) SP && POC_IS_PRINTABLE_CHAR(*raw_input_buffer)){
-		**request_resource++ = *raw_input_buffer++;
-		current_buffer_index++;
+		*request_resource++ = *raw_input_buffer;
+		POC_INCREMENT_BUFFER_OFFSET(1);
 	}
-	if(*raw_input_buffer == (char)SP) goto PARSE_HTTP_VERSION;
+	if(*raw_input_buffer == (char)SP){
+		POC_INCREMENT_BUFFER_OFFSET(1);
+		goto PARSE_HTTP_VERSION;
+	} 
 	
 PARSE_HTTP_VERSION:
 	CHECK_IF_HTTP_VERSION_SUPPORTED(raw_input_buffer);
 				
-PARSE_HTTP_HEADERS:
+PARSE_HTTP_HEADERS: ;
 	// Small internal state-machine for parsing headers
-	typedef enum { _HEADER_NAME, _HEADER_VALUE, _HEADER_CR, _HEADER_LF, _HEADER_END } _Header_Parsing_State;
+	typedef enum { _HEADER_NAME, _HEADER_VALUE, _HEADER_LF, _HEADER_END_LF } _Header_Parsing_State;
 	_Header_Parsing_State current_state = _HEADER_NAME;
 	for(;;){
 		switch(current_state){
 			case _HEADER_NAME:
-				if(POC_IS_TOKEN(*raw_input_buffer)){
+				if(*raw_input_buffer == (char)CR){
+					POC_INCREMENT_BUFFER_OFFSET(1);
+					current_state = _HEADER_END_LF;
+				}else if(POC_IS_TOKEN(*raw_input_buffer)){
 					POC_APPEND_CHAR_TO_HEADER_NAME(*raw_input_buffer, http_header);
-					raw_input_buffer++;
-					current_buffer_index++;
+					POC_INCREMENT_BUFFER_OFFSET(1);
 				}else if(*raw_input_buffer == ':'){
 					current_state = _HEADER_VALUE;	
-					raw_input_buffer++;
-					current_buffer_index++;
+					POC_INCREMENT_BUFFER_OFFSET(1);
 				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
 				break;
 			case _HEADER_VALUE:
 				if(*raw_input_buffer == (char)CR){
-					raw_input_buffer++;
-					current_buffer_index++;
-					current_state = _HEADER_CR;
-				}else if(*raw_input_buffer == (char)SP){
-					raw_input_buffer++;
-					current_buffer_index++;
+					POC_INCREMENT_BUFFER_OFFSET(1);
+					current_state = _HEADER_LF;
+				}else if(*raw_input_buffer == (char)SP && *(raw_input_buffer-1) == ':'){
+					POC_INCREMENT_BUFFER_OFFSET(1);
 				}else if(POC_IS_TEXT(*raw_input_buffer)){
 					POC_APPEND_CHAR_TO_HEADER_VALUE(*raw_input_buffer, http_header);
-					raw_input_buffer++;
-					current_buffer_index++;
-				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
-				break;
-			case _HEADER_CR:
-				if(*raw_input_buffer == (char)LF){
-					raw_input_buffer++;
-					current_buffer_index++;
-					current_state = _HEADER_LF;
+					POC_INCREMENT_BUFFER_OFFSET(1);
 				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
 				break;
 			case _HEADER_LF:
-				if(*raw_input_buffer == (char)CR){
-					raw_input_buffer++;
-					current_buffer_index++;
-					current_state = _HEADER_END;
-				}else if(POC_IS_TOKEN(*raw_input_buffer)){
-					http_header->current_index++;
+				if(*raw_input_buffer == (char)LF){
+					POC_INCREMENT_BUFFER_OFFSET(1);
 					current_state = _HEADER_NAME;
+					http_header->current_index++;
 				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
 				break;
-			case _HEADER_END:
-				goto PARSE_HTTP_BODY;
-		}	
+			case _HEADER_END_LF:
+				if(*raw_input_buffer == (char)LF){
+					POC_INCREMENT_BUFFER_OFFSET(1);
+					goto PARSE_HTTP_BODY;
+				}else{ POC_PROTOCOL_ERROR_HANDLER(); }
+				break;
+		}
 	}
 
-PARSE_HTTP_BODY:
-	size_t total_remaining_size = (input_buffer_size-1) - current_buffer_index;
+PARSE_HTTP_BODY: ;
+	size_t total_remaining_size = (input_buffer_size) - current_buffer_index;
 	if(total_remaining_size >= http_body->total_memory){
 		*http_parser_error = ERROR_BUFFER_OVERFLOW;
 		return false;
 	}
-	memcpy(http_body->buffer, &raw_input_buffer[current_buffer_index], total_remaining_size);
+	memcpy(http_body->buffer, raw_input_buffer, total_remaining_size);
+	http_body->current_index = (total_remaining_size-1);
 	return true;
 }
 
 
-#endif
+#endif // !HTTP_PARSER_TWO_H

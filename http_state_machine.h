@@ -333,7 +333,7 @@ static inline bool poc_http_state_machine_parser(
 				if(*input_buffer == (char)CR){
 					*current_state = HEADER_VALUE_LF;
 					input_buffer++;
-				}else if(*input_buffer == (char)SP){
+				}else if(*input_buffer == (char)SP && *(input_buffer-1) == ':'){
 					input_buffer++;
 				}else if(POC_IS_TEXT(*input_buffer)){
 					POC_APPEND_CHAR_HEADER_VALUE(http_message, *input_buffer);

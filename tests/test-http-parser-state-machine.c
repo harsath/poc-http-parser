@@ -1,8 +1,7 @@
-#include <string.h>
 #include "http_state_machine.h"
 #include "test-helper.h"
 
-int main(int argc, const char*const argv[]){
+void test_http_state_machine(void){
 	{ // GET Request parsing
 		const char* sample_http_get_request = "GET /index.php HTTP/1.1\r\n"
 						      "Host: www.foo.com\r\n"
@@ -86,6 +85,4 @@ int main(int argc, const char*const argv[]){
 		POC_ASSERT_EQ(parser_state_post, PARSING_DONE, "POST parser state");
 		poc_free_http_request_message(http_request_message_post);
 	}
-
-	POC_TEST_STATS();
 }
