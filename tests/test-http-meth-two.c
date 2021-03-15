@@ -47,6 +47,9 @@ void test_http_meth_two(void){
 		POC_ASSERT_TRUE(memcmp(http_header->http_header_pairs[4].header_value, "Proxygen/FB-CXX", 
 					strlen("Proxygen/FB-CXX")) == 0, "Meth-2 HTTP Header value 4");
 		POC_ASSERT_TRUE(http_header->current_index == 5, "Meth-3 internal current_index check");
+		poc_free_http_header(http_header);
+		poc_free_buffer(http_body);
+		free(request_resource);
 	}
 
 	{ // HTTP POST Message parsing test
@@ -90,5 +93,8 @@ void test_http_meth_two(void){
 					strlen("key_one=value_one&key_two=value_two")) == 0, "Meth-2 POST HTTP message body");
 		POC_ASSERT_TRUE(http_body->current_index == strlen("key_one=value_one&key_two=value_two")-1, 
 				"Meth-2 POST HTTP body current_index");
+		poc_free_http_header(http_header);
+		poc_free_buffer(http_body);
+		free(request_resource);
 	}
 }

@@ -2,4 +2,7 @@
 All benchmarks are tested under CPU with spec in `cpu_spec.txt`.
 ##### HTTP State Machine:
 - At(Commit Hash): 6c02a4f7e8a68dc49b3e760d2103e668f1cdbc1b
-- Bench: 10000000 GET request(see `http_parser_state_machine_bench.c`) in ~15.312029 seconds
+- Bench: 10000000 GET requests(see `http_parser_state_machine_bench.c`) in ~15.009198 seconds
+##### HTTP Parsing method two:
+- At(Commit Hash): 67a9fb03c28f6e7683815d894203a9d87d4e6b56
+- Bench: 10000000 GET requests(see `http_parser_meth_two_bench.c`) in ~15.259364 seconds

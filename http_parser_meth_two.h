@@ -121,6 +121,18 @@ static inline poc_Header* poc_allocate_http_header(size_t number_of_headers){
 	return http_header;
 }
 
+__attribute__((always_inline))
+static inline void poc_free_buffer(poc_Buffer* buffer){
+	free(buffer->buffer);
+	free(buffer);
+}
+
+__attribute__((always_inline))
+static inline void poc_free_http_header(poc_Header* http_header){
+	free(http_header->http_header_pairs);
+	free(http_header);
+}
+
 #define POC_IS_SEPERATOR(CHAR_VALUE) 												\
 	((CHAR_VALUE == '(') || (CHAR_VALUE == ')') || (CHAR_VALUE == '<') || (CHAR_VALUE == '>') || (CHAR_VALUE == '@')  ||	\
 	 (CHAR_VALUE == ',') || (CHAR_VALUE == ';') || (CHAR_VALUE == ':') || (CHAR_VALUE == '\\') || (CHAR_VALUE == '"') ||	\
