@@ -58,7 +58,7 @@ typedef struct {
 #define POC_IS_TOKEN(CHAR_VALUE) (POC_IS_CHAR(CHAR_VALUE) && !(POC_IS_CONTROL(CHAR_VALUE) || POC_IS_SEPERATOR(CHAR_VALUE)))
 #define POC_IS_TEXT(CHAR_VALUE) (!POC_IS_CONTROL(CHAR_VALUE) || (CHAR_VALUE) == (char)SP || (CHAR_VALUE) == HT)
 
-static inline void http_parse_request(char* message_buffer, size_t message_buffer_size, char** request_method, size_t* request_method_len,
+static void http_parse_request(char* message_buffer, size_t message_buffer_size, char** request_method, size_t* request_method_len,
 				      char** request_resource, size_t* request_resource_len, int* major_version_num, int* minor_version_num,
 				      poc_header_pair* headers, size_t* num_header, char** message_body, size_t* message_body_size, bool* failed){
 

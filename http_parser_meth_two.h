@@ -32,26 +32,22 @@
 
 // Fast strcmp helpers
 #define str4cmp_macro(ptr, c0, c1, c2, c3) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && *(ptr+3) == c3
-__attribute__((always_inline))
-static inline bool str4cmp(const char* ptr, const char* cmp){
+static bool str4cmp(const char* ptr, const char* cmp){
 		return str4cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3));
 }
 #define str5cmp_macro(ptr, c0, c1, c2, c3, c4) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && 				\
 					*(ptr+3) == c3 && *(ptr+4) == c4
-__attribute__((always_inline))
-static inline bool str5cmp(const char* ptr, const char* cmp){
+static bool str5cmp(const char* ptr, const char* cmp){
 		return str5cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3),  *(cmp+4));
 }
 #define str7cmp_macro(ptr, c0, c1, c2, c3, c4, c5, c6) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && 			\
 						*(ptr+3) == c3 && *(ptr+4) == c4 && *(ptr+5) == c5 && *(ptr+6) == c6
-__attribute__((always_inline))
-static inline bool str7cmp(const char* ptr, const char* cmp){
+static bool str7cmp(const char* ptr, const char* cmp){
 		return str7cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3),  *(cmp+4),  *(cmp+5),  *(cmp+6));
 }
 #define str10cmp_macro(ptr, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 		\
 		&& *(ptr+3) == c3 && *(ptr+4) == c4 && *(ptr+5) == c5 && *(ptr+6) == c6 && *(ptr+7) == c7 && *(ptr+8) == c8 && *(ptr+9) == c9
-__attribute__((always_inline))
-static inline bool str10cmp(const char* ptr, const char* cmp){
+static bool str10cmp(const char* ptr, const char* cmp){
 		return str10cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3),  *(cmp+4),  *(cmp+5),  *(cmp+6),
 				*(cmp+7),  *(cmp+8),  *(cmp+9));
 }
@@ -99,7 +95,7 @@ typedef struct {
 	size_t current_index;
 } poc_Buffer;
 
-static inline poc_Buffer* poc_allocate_http_buffer(size_t buffer_size){
+static poc_Buffer* poc_allocate_http_buffer(size_t buffer_size){
 	poc_Buffer* http_buffer = (poc_Buffer*) POC_ALLOCATOR(poc_Buffer, 1);
 	http_buffer->buffer = (unsigned char*) POC_ALLOCATOR(unsigned char, buffer_size);
 	http_buffer->current_index = 0;
@@ -107,7 +103,7 @@ static inline poc_Buffer* poc_allocate_http_buffer(size_t buffer_size){
 	return http_buffer;
 }
 
-static inline poc_Header* poc_allocate_http_header(size_t number_of_headers){
+static poc_Header* poc_allocate_http_header(size_t number_of_headers){
 	poc_Header* http_header = (poc_Header*) POC_ALLOCATOR(poc_Header, 1);
 	http_header->http_header_pairs = (poc_Header_Pair*) POC_ALLOCATOR(poc_Header_Pair, number_of_headers);
 	http_header->total_header_pair = number_of_headers;
@@ -121,14 +117,12 @@ static inline poc_Header* poc_allocate_http_header(size_t number_of_headers){
 	return http_header;
 }
 
-__attribute__((always_inline))
-static inline void poc_free_buffer(poc_Buffer* buffer){
+static void poc_free_buffer(poc_Buffer* buffer){
 	free(buffer->buffer);
 	free(buffer);
 }
 
-__attribute__((always_inline))
-static inline void poc_free_http_header(poc_Header* http_header){
+static void poc_free_http_header(poc_Header* http_header){
 	free(http_header->http_header_pairs);
 	free(http_header);
 }
@@ -144,7 +138,7 @@ static inline void poc_free_http_header(poc_Header* http_header){
 #define POC_IS_TOKEN(CHAR_VALUE) (POC_IS_CHAR(CHAR_VALUE) && !(POC_IS_CONTROL(CHAR_VALUE) || POC_IS_SEPERATOR(CHAR_VALUE)))
 #define POC_IS_TEXT(CHAR_VALUE) (!POC_IS_CONTROL(CHAR_VALUE) || (CHAR_VALUE) == (char)SP || (CHAR_VALUE) == HT)
 
-static inline bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_header, const char* raw_input_buffer, 
+static bool poc_http_parser(poc_Buffer* http_body, poc_Header* http_header, const char* raw_input_buffer, 
 					size_t input_buffer_size, poc_HTTP_Method* http_method, char* request_resource, 
 					poc_HTTP_Version* http_version, poc_Parser_Error* http_parser_error){
 	size_t current_buffer_index = 0;

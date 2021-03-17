@@ -38,7 +38,7 @@ function generate_macro($num) : string {
 }
 
 function generate_static_inline_fn(&$generated_macro, $num) : string {
-        $generated_macro .= "__attribute__((always_inline))\nstatic inline bool str".$num."cmp(const char* ptr, const char* cmp)".
+        $generated_macro .= "\nstatic bool str".$num."cmp(const char* ptr, const char* cmp)".
                                 "{\n\t\treturn str".$num."cmp_macro(ptr, ";
         for($x = 0; $x < $num; $x++){
                 $generated_macro .= " *(cmp+".$x.")";

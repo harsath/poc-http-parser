@@ -29,18 +29,15 @@
 #include <unistd.h>
 #include <ctype.h>
 #define poc_str3cmp_macro(ptr, c0, c1, c2) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2
-__attribute__((always_inline))
-static inline bool poc_str3cmp(const unsigned char* ptr, const unsigned char* cmp){
+static bool poc_str3cmp(const unsigned char* ptr, const unsigned char* cmp){
 		return poc_str3cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2));
 }
 #define poc_str4cmp_macro(ptr, c0, c1, c2, c3) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && *(ptr+3) == c3
-__attribute__((always_inline))
-static inline bool poc_str4cmp(const unsigned char* ptr, const unsigned char* cmp){
+static bool poc_str4cmp(const unsigned char* ptr, const unsigned char* cmp){
 		return poc_str4cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3));
 }
 #define str5cmp_macro(ptr, c0, c1, c2, c3, c4) *(ptr+0) == c0 && *(ptr+1) == c1 && *(ptr+2) == c2 && *(ptr+3) == c3 && *(ptr+4) == c4
-__attribute__((always_inline))
-static inline bool str5cmp(const unsigned char* ptr, const unsigned char* cmp){
+static bool str5cmp(const unsigned char* ptr, const unsigned char* cmp){
 		return str5cmp_macro(ptr,  *(cmp+0),  *(cmp+1),  *(cmp+2),  *(cmp+3),  *(cmp+4));
 }
 #define POC_ALLOCATOR(num_of_elements, size_of_single_type) calloc(num_of_elements, size_of_single_type)
@@ -105,21 +102,21 @@ typedef struct {
 	poc_Buffer* http_message_body;
 } poc_HTTP_Request_Message;
 
-static inline poc_Header* poc_allocate_http_header(size_t num_header){
+static poc_Header* poc_allocate_http_header(size_t num_header){
 	poc_Header* http_header = (poc_Header*)POC_ALLOCATOR(1, sizeof(poc_Header));
 	http_header->http_header_pairs = (poc_Header_Pair*)POC_ALLOCATOR(num_header, sizeof(poc_Header_Pair));
 	http_header->_total_headers_pairs = num_header;
 	return http_header;
 }
 
-static inline poc_Buffer* poc_allocate_buffer(size_t buffer_size){
+static poc_Buffer* poc_allocate_buffer(size_t buffer_size){
 	poc_Buffer* buffer = (poc_Buffer*)POC_ALLOCATOR(1, sizeof(poc_Buffer));
 	buffer->buffer = (unsigned char*)POC_ALLOCATOR(1, sizeof(unsigned char) * buffer_size);
 	buffer->_remaining_memory = buffer_size;
 	return buffer;
 }
 
-static inline poc_HTTP_Request_Message* poc_allocate_http_request_message(
+static poc_HTTP_Request_Message* poc_allocate_http_request_message(
 	size_t num_header, size_t message_body_buffer_size, size_t request_resource_buffer_Size,
 	size_t  http_version_buffer_size, size_t http_method_buffer_size){
 	poc_HTTP_Request_Message* http_request_message = (poc_HTTP_Request_Message*)POC_ALLOCATOR(1, sizeof(poc_HTTP_Request_Message));
@@ -131,20 +128,17 @@ static inline poc_HTTP_Request_Message* poc_allocate_http_request_message(
 	return http_request_message;
 }
 
-__attribute__((always_inline))
-static inline void poc_free_buffer(poc_Buffer* buffer){
+static void poc_free_buffer(poc_Buffer* buffer){
 	free(buffer->buffer);
 	free(buffer);
 }
 
-__attribute__((always_inline))
-static inline void poc_free_header(poc_Header* http_header){
+static void poc_free_header(poc_Header* http_header){
 	free(http_header->http_header_pairs);
 	free(http_header);
 }
 
-__attribute__((always_inline))
-static inline void poc_free_http_request_message(poc_HTTP_Request_Message* http_message){
+static void poc_free_http_request_message(poc_HTTP_Request_Message* http_message){
 	poc_free_buffer(http_message->http_message_body);
 	poc_free_buffer(http_message->http_method);
 	poc_free_buffer(http_message->http_request_resource);
@@ -153,8 +147,7 @@ static inline void poc_free_http_request_message(poc_HTTP_Request_Message* http_
 	free(http_message);
 }
 
-__attribute__((always_inline))
-static inline bool _poc_is_seperator(char value){
+static bool _poc_is_seperator(char value){
 	switch(value){
 		case '(':
 		case ')':
@@ -186,7 +179,7 @@ static inline bool _poc_is_seperator(char value){
 #define POC_IS_TOKEN(CHAR_VALUE) (POC_IS_CHAR(CHAR_VALUE) && !(POC_IS_CONTROL(CHAR_VALUE) || _poc_is_seperator(CHAR_VALUE)))
 #define POC_IS_TEXT(CHAR_VALUE) (!POC_IS_CONTROL(CHAR_VALUE) || (CHAR_VALUE == (char)SP) || (CHAR_VALUE == HT))
 
-static inline bool poc_http_state_machine_parser(
+static bool poc_http_state_machine_parser(
 		 poc_HTTP_Request_Message* http_message, ParserState* current_state, const char* input_buffer, 
 		 size_t buffer_size, bool* is_protocol_failur){
 
