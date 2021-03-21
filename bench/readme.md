@@ -2,7 +2,7 @@
 All benchmarks are tested under CPU with spec in `cpu_spec.txt`.
 #### HTTP Zero Memory Allocation Parser:
 - At(Commit Hash): d2cc8aa972ae73a2781e6135d1cebc9f0ccf9c8b
-- Bench: 10000000 GET requests(see `./http_zero_mem_alloc_parser_bench.c`) in ~5.401514 seconds
+- Bench: 10000000 GET requests(see `./http_zero_mem_alloc_parser_bench.c`) in ~5.124441 seconds
 #### HTTP State Machine:
 - At(Commit Hash): 6c02a4f7e8a68dc49b3e760d2103e668f1cdbc1b
 - Bench: 10000000 GET requests(see `http_parser_state_machine_bench.c`) in ~15.009198 seconds

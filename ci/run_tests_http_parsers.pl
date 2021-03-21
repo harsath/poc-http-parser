@@ -8,7 +8,7 @@ sub run_tests {
 	if(-d $build_dir_name){ print "[ERROR]: Build dir already exists, remove first"; exit(1); }
 	mkdir($build_dir_name);
 	chdir($build_dir_name);
-	system(qq/cmake -GNinja .. && ninja/);
+	system(qq/CC=gcc-9 && CXX=g++-9 cmake -GNinja .. && ninja/);
 	system(qq/.\/poc_http_parser_tests/);
 }
 

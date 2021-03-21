@@ -1,0 +1,8 @@
+Language: Cpp
+BasedOnStyle: LLVM
+AllowShortBlocksOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLoopsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+UseTab: Always
+IndentWidth: 8
