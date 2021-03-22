@@ -12,6 +12,7 @@ set(
 	test-http-parser-state-machine.c
 	test-http-meth-two.c
 	test-http-zero-mem-alloc-parser.c
+	test-http-SSE-zero-mem-alloc-parser.c
 )
 add_executable(
 	${PROJECT_NAME}
