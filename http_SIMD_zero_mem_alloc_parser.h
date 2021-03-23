@@ -25,11 +25,21 @@
 #include <immintrin.h>
 #include <nmmintrin.h>
 #include <pmmintrin.h>
+#include <smmintrin.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define str5cmp_macro(ptr, c0, c1, c2, c3, c4)                                 \
+	*(ptr + 0) == c0 &&*(ptr + 1) == c1 &&*(ptr + 2) == c2 &&*(ptr + 3) == \
+	    c3 &&*(ptr + 4) == c4
+
+static bool str5cmp(const char *ptr, const char *cmp) {
+	return str5cmp_macro(ptr, *(cmp + 0), *(cmp + 1), *(cmp + 2),
+			     *(cmp + 3), *(cmp + 4));
+}
 
 typedef enum { CR = 0x0D, LF = 0x0A, SP = 0x20, HT = 0x09 } LexConst;
 
@@ -41,9 +51,9 @@ typedef struct {
 } poc_header_pair;
 
 // clang-format off
-// Use AVX2 256-bit version if processor supports AVX2
-#if defined(__AVX2__)
-static const char *fast_find_char(const char *buffer_start, const char *buffer_end, char find){
+// Very useful/fast helpers. AVX2 256-bit version if processor supports AVX2
+// #if defined(__AVX__)
+static char *fast_find_char_avx2(char *buffer_start, char *buffer_end, char find){
 	__m256i char_fill = _mm256_set1_epi8(find);
 	for(; buffer_start+32 < buffer_end; buffer_start += 32){
 		__m256i buff_pack = _mm256_lddqu_si256((__m256i*)buffer_start);
@@ -56,10 +66,10 @@ static const char *fast_find_char(const char *buffer_start, const char *buffer_e
 	return buffer_start;
 }
 // or else, use SSE4.2 128-bit version as fallback
-#elif defined(__SSE4_2__)
-static const char *fast_find_char(const char *buffer_start, const char *buffer_end, char find){
+// #elif defined(__SSE4_2__)
+static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char find){
 	__m128i char_fill = _mm_set1_epi8(find);
-	for(; buffer_start+32 < buffer_end; buffer_start += 32){
+	for(; buffer_start+16 < buffer_end; buffer_start += 16){
 		__m128i buff_pack = _mm_lddqu_si128((__m128i*)buffer_start);
 		__m128i result = _mm_cmpeq_epi8(buff_pack, char_fill);
 		int mask = _mm_movemask_epi8(result);
@@ -69,7 +79,7 @@ static const char *fast_find_char(const char *buffer_start, const char *buffer_e
 		if(*buffer_start == find) return buffer_start;
 	return buffer_start;
 }
-#endif
+// #endif
 // clang-format on
 
 #define POC_INIT_HEADER_PAIR_TO_ZERO(header_pair_ptr, pair_size)               \
@@ -119,32 +129,6 @@ static void http_parse_request(
 			return;                                                \
 		}                                                              \
 	} while (0)
-#define POC_EXPECT_CHAR(CHAR_VALUE)                                            \
-	do {                                                                   \
-		if (*message_buffer != CHAR_VALUE) {                           \
-			*failed = true;                                        \
-			return;                                                \
-		}                                                              \
-		POC_INCREMENT_BUFFER_OFFSET(1);                                \
-	} while (0)
-#define POC_EXPECT_CRLF(MESSAGE_BUFFER)                                        \
-	do {                                                                   \
-		if (*MESSAGE_BUFFER != (char)CR &&                             \
-		    *(MESSAGE_BUFFER + 1) != (char)LF) {                       \
-			*failed = true;                                        \
-			return;                                                \
-		}                                                              \
-		POC_INCREMENT_BUFFER_OFFSET(2);                                \
-	} while (0)
-#define POC_GET_INT_FROM_CHAR(CHAR_VALUE) (CHAR_VALUE - '0')
-#define POC_CHECK_EOF_VECTOR()                                                 \
-	do {                                                                   \
-		if ((current_buffer_index + POC_CHAR_VECTOR_SIZE) >=           \
-		    message_buffer_size) {                                     \
-			*failed = true;                                        \
-			return;                                                \
-		}                                                              \
-	} while (0)
 
 	// parsing HTTP request method
 	size_t current_buffer_index = 0;
@@ -156,29 +140,19 @@ static void http_parse_request(
 	}
 	POC_INCREMENT_BUFFER_OFFSET(1); // skip the SP
 
-	// use SIMD here
-	*request_resource = message_buffer;
-	__m128i space_in_vector = _mm_set1_epi8(' ');
 	// clang-format off
-	for (;;) {
-		POC_CHECK_EOF_VECTOR();
-		__m128i message_buffer_vector = _mm_loadu_si128((__m128i*)message_buffer);
-		__m128i matches = _mm_cmpeq_epi8(message_buffer_vector, space_in_vector);
-		uint16_t eq_mask = _mm_movemask_epi8(matches);
-		if (eq_mask != 0) {
-			int clz = __builtin_ctz(eq_mask);
-			(*request_resource_len) += clz;
-			POC_INCREMENT_BUFFER_OFFSET(clz);
-			goto PARSE_HTTP_VERSION;
-		}
-		(*request_resource_len) += POC_CHAR_VECTOR_SIZE;
-		POC_INCREMENT_BUFFER_OFFSET(16);
+	*request_resource = message_buffer;
+	const char *original_ptr = message_buffer;
+	message_buffer = fast_find_char_sse4_2(message_buffer, message_buffer + (message_buffer_size - 1), ' ');
+	if (*message_buffer != ' ') {
+		*failed = true;
+		return;
 	}
-	// clang-format on
-PARSE_HTTP_VERSION:
+	*request_resource_len = (message_buffer - original_ptr);
+	current_buffer_index += *request_resource_len;
 	POC_INCREMENT_BUFFER_OFFSET(1);
-#ifdef POC_SIMD_FOR_HTTP_VERSION
-	// parsing HTTP message version(SSE)
+	// clang-format on
+#if POC_SIMD_FOR_HTTP_VERSION
 	__m128i version_pack_one =
 	    _mm_setr_epi8('H', 'T', 'T', 'P', '/', '1', '.', '1', '\r', '\n',
 			  '\0', '\0', '\0', '\0', '\0', '\0');
@@ -197,99 +171,58 @@ PARSE_HTTP_VERSION:
 		*failed = true;
 		return;
 	}
+#else
+	if (!str5cmp(message_buffer, "HTTP/")) {
+		*failed = true;
+		return;
+	}
+	POC_INCREMENT_BUFFER_OFFSET(5);
+	*major_version_num = *message_buffer - '0';
+	POC_INCREMENT_BUFFER_OFFSET(2);
+	*minor_version_num = *message_buffer - '0';
+	POC_INCREMENT_BUFFER_OFFSET(3); // Skip EOL marker
 #endif
-	// let's parse headers
-	// internal state machine for parsing headers
-	typedef enum {
-		HEADER_NAME,
-		HEADER_NAME_ACCEPT,
-		HEADER_VALUE,
-		HEADER_VALUE_ACCEPT,
-		HEADER_LF
-	} header_parser_state;
-	header_parser_state current_state = HEADER_NAME;
-	size_t current_header_index_processing = 0;
-	while (1) {
-		switch (current_state) {
-		case HEADER_NAME:
-			if (*message_buffer == (char)CR) {
-				current_state = HEADER_LF;
-				POC_INCREMENT_BUFFER_OFFSET(1);
-			} else if (POC_IS_TOKEN(*message_buffer)) {
-				headers[current_header_index_processing]
-				    .header_name = message_buffer;
-				current_state = HEADER_NAME_ACCEPT;
-			} else {
-				goto ERROR_FAIL;
-			}
-			break;
-		case HEADER_NAME_ACCEPT:
-			if (*message_buffer == (char)CR) {
-				current_state = HEADER_LF;
-				POC_INCREMENT_BUFFER_OFFSET(1);
-			} else if (POC_IS_TOKEN(*message_buffer)) {
-				POC_INCREMENT_BUFFER_OFFSET(1);
-				headers[current_header_index_processing]
-				    .header_name_len++;
-			} else if (*message_buffer == ':') {
-				current_state = HEADER_VALUE;
-				POC_INCREMENT_BUFFER_OFFSET(1);
-			} else {
-				goto ERROR_FAIL;
-			}
-			break;
-		case HEADER_VALUE:
-			if (*message_buffer == (char)CR) {
-				POC_INCREMENT_BUFFER_OFFSET(1);
-				current_state = HEADER_LF;
-			} else if (*message_buffer == (char)SP &&
-				   *(message_buffer - 1) == ':') {
-				POC_INCREMENT_BUFFER_OFFSET(1);
-			} else if (POC_IS_TEXT(*message_buffer)) {
-				headers[current_header_index_processing]
-				    .header_value = message_buffer;
-				current_state = HEADER_VALUE_ACCEPT;
-			} else {
-				goto ERROR_FAIL;
-			}
-			break;
-		case HEADER_VALUE_ACCEPT:
-			if (*message_buffer == (char)CR) {
-				current_state = HEADER_LF;
-				POC_INCREMENT_BUFFER_OFFSET(1);
-			} else if (POC_IS_TEXT(*message_buffer)) {
-				headers[current_header_index_processing]
-				    .header_value_len++;
-				POC_INCREMENT_BUFFER_OFFSET(1);
-			} else {
-				goto ERROR_FAIL;
-			}
-			break;
-		case HEADER_LF:
-			if (*message_buffer == (char)LF &&
-			    *(message_buffer + 1) == (char)CR &&
-			    *(message_buffer + 2) == (char)LF) {
-				POC_INCREMENT_BUFFER_OFFSET(3);
-				*num_header =
-				    (current_header_index_processing + 1);
-				goto PROCESS_HTTP_MESSAGE_BODY;
-			} else if (*message_buffer == (char)LF &&
-				   POC_IS_TOKEN(*(message_buffer + 1))) {
-				POC_INCREMENT_BUFFER_OFFSET(1);
-				current_state = HEADER_NAME;
-				++current_header_index_processing;
-			} else {
-				goto ERROR_FAIL;
-			}
+	// clang-format off
+	for (;; ++*num_header) {
+		if (*message_buffer == '\r' && *(message_buffer + 1) == '\n') {
+			POC_INCREMENT_BUFFER_OFFSET(2);
 			break;
 		}
+		char *colon_ptr = fast_find_char_sse4_2(message_buffer, message_buffer + (message_buffer_size-1), ':');
+		// Do not allow space before colon in HTTP header. HTTP response smuggling vulnerability mitigation.
+		// https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2006-2786
+		if(*(colon_ptr-1) == ' '){
+			*failed = true;
+			return;
+		}
+		if(*colon_ptr != ':'){
+			*failed = true;
+			return;
+		}
+		headers[*num_header].header_name = message_buffer;
+		headers[*num_header].header_name_len = (colon_ptr - message_buffer);
+		current_buffer_index += (colon_ptr - message_buffer);
+		message_buffer = colon_ptr;
+		POC_INCREMENT_BUFFER_OFFSET(1);
+		if(*message_buffer == ' '){ POC_INCREMENT_BUFFER_OFFSET(1); }
+		if(!POC_IS_TEXT(*message_buffer) && *message_buffer != ' '){
+			*failed = true;
+			return;
+		}
+		headers[*num_header].header_value = message_buffer;
+		char *newline_ptr = fast_find_char_sse4_2(message_buffer, message_buffer + (message_buffer_size-1), '\n');
+		if(*newline_ptr != '\n' && *(newline_ptr-1) != '\r'){
+			*failed = true;
+			return;
+		}
+		//                                      (Skipping EOL marker in size)
+		headers[*num_header].header_value_len = (newline_ptr-1) - message_buffer;
+		current_buffer_index += (newline_ptr - message_buffer);
+		message_buffer = newline_ptr;
+		POC_INCREMENT_BUFFER_OFFSET(1);
 	}
+	// clang-format on
 
-ERROR_FAIL:
-	*failed = true;
-	return;
-
-PROCESS_HTTP_MESSAGE_BODY:;
 	ssize_t total_buffer_remaining =
 	    (message_buffer_size - current_buffer_index);
 	if (total_buffer_remaining > 0) {

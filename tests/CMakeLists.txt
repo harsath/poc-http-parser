@@ -12,9 +12,10 @@ set(
 	test-http-parser-state-machine.c
 	test-http-meth-two.c
 	test-http-zero-mem-alloc-parser.c
-	test-http-SSE-zero-mem-alloc-parser.c
+	test-http-SIMD-zero-mem-alloc-parser.c
 )
 add_executable(
 	${PROJECT_NAME}
 	${SOURCE_FILES}
 )
+target_compile_options(${PROJECT_NAME} PUBLIC -march=native -O3)
