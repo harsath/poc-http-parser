@@ -1,5 +1,3 @@
-GCC Flags:			 -O3 -funroll-loops -march=native -ftree-vectorize -mtune=native
-
 Test CPU Spec:-
 Architecture:                    x86_64
 CPU op-mode(s):                  32-bit, 64-bit

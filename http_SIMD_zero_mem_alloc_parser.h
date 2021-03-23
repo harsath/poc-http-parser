@@ -31,15 +31,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// NOTE: 'simd' suffix denotes the 'SIMD' implementation, it's named this way to avoid collision in benchmarks/tests 
+// NOTE: 'simd' suffix denotes the 'SIMD' implementation, it's named this way to
+// avoid collision in benchmarks/tests
 
-#define str5cmp_macro_simd(ptr, c0, c1, c2, c3, c4)                                 \
+#define str5cmp_macro_simd(ptr, c0, c1, c2, c3, c4)                            \
 	*(ptr + 0) == c0 &&*(ptr + 1) == c1 &&*(ptr + 2) == c2 &&*(ptr + 3) == \
 	    c3 &&*(ptr + 4) == c4
 
 static bool str5cmp_simd(const char *ptr, const char *cmp) {
 	return str5cmp_macro_simd(ptr, *(cmp + 0), *(cmp + 1), *(cmp + 2),
-			     *(cmp + 3), *(cmp + 4));
+				  *(cmp + 3), *(cmp + 4));
 }
 
 typedef struct {
@@ -58,7 +59,7 @@ static char *fast_find_char_avx2(char *buffer_start, char *buffer_end, char find
 		__m256i buff_pack = _mm256_lddqu_si256((__m256i*)buffer_start);
 		__m256i result = _mm256_cmpeq_epi8(buff_pack, char_fill);
 		int mask = _mm256_movemask_epi8(result);
-		if(mask) return buffer_start + __builtin_ffs(mask) - 1;
+		if(mask) return buffer_start + __builtin_ffs(mask);
 	}
 	for(; buffer_start < buffer_end; ++buffer_start)
 		if(*buffer_start == find) return buffer_start;
@@ -72,7 +73,7 @@ static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char fi
 		__m128i buff_pack = _mm_lddqu_si128((__m128i*)buffer_start);
 		__m128i result = _mm_cmpeq_epi8(buff_pack, char_fill);
 		int mask = _mm_movemask_epi8(result);
-		if(mask) return buffer_start + __builtin_ffs(mask) - 1;
+		if(mask) return buffer_start + __builtin_ctz(mask);
 	}
 	for(; buffer_start < buffer_end; ++buffer_start)
 		if(*buffer_start == find) return buffer_start;
@@ -81,7 +82,7 @@ static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char fi
 // #endif
 // clang-format on
 
-#define POC_INIT_HEADER_PAIR_TO_ZERO_SIMD(header_pair_ptr, pair_size)               \
+#define POC_INIT_HEADER_PAIR_TO_ZERO_SIMD(header_pair_ptr, pair_size)          \
 	do {                                                                   \
 		for (size_t i = 0; i < pair_size; i++) {                       \
 			header_pair_ptr[i].header_name = NULL;                 \
@@ -90,23 +91,23 @@ static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char fi
 			header_pair_ptr[i].header_value_len = 0;               \
 		}                                                              \
 	} while (0)
-#define POC_IS_SEPERATOR_SIMD(CHAR_VALUE)                                           \
+#define POC_IS_SEPERATOR_SIMD(CHAR_VALUE)                                      \
 	((CHAR_VALUE == '(') || (CHAR_VALUE == ')') || (CHAR_VALUE == '<') ||  \
 	 (CHAR_VALUE == '>') || (CHAR_VALUE == '@') || (CHAR_VALUE == ',') ||  \
 	 (CHAR_VALUE == ';') || (CHAR_VALUE == ':') || (CHAR_VALUE == '\\') || \
 	 (CHAR_VALUE == '"') || (CHAR_VALUE == '/') || (CHAR_VALUE == '[') ||  \
 	 (CHAR_VALUE == ']') || (CHAR_VALUE == '?') || (CHAR_VALUE == '=') ||  \
-	 (CHAR_VALUE == '{') || (CHAR_VALUE == '}') ||                         \
-	 (CHAR_VALUE == ' ') || (CHAR_VALUE == '\t'))
-#define POC_IS_PRINTABLE_CHAR_SIMD(CHAR_VALUE)                                      \
+	 (CHAR_VALUE == '{') || (CHAR_VALUE == '}') || (CHAR_VALUE == ' ') ||  \
+	 (CHAR_VALUE == '\t'))
+#define POC_IS_PRINTABLE_CHAR_SIMD(CHAR_VALUE)                                 \
 	(((unsigned)CHAR_VALUE >= 0x20) && ((unsigned)CHAR_VALUE < 0x7F))
 #define POC_IS_CHAR_SIMD(CHAR_VALUE) ((unsigned)CHAR_VALUE <= 127)
-#define POC_IS_CONTROL_SIMD(CHAR_VALUE)                                             \
+#define POC_IS_CONTROL_SIMD(CHAR_VALUE)                                        \
 	((CHAR_VALUE >= 0 && CHAR_VALUE <= 31) || (CHAR_VALUE == 127))
-#define POC_IS_TOKEN_SIMD(CHAR_VALUE)                                               \
-	(POC_IS_CHAR_SIMD(CHAR_VALUE) &&                                            \
-	 !(POC_IS_CONTROL_SIMD(CHAR_VALUE) || POC_IS_SEPERATOR_SIMD(CHAR_VALUE)))
-#define POC_IS_TEXT_SIMD(CHAR_VALUE)                                                \
+#define POC_IS_TOKEN_SIMD(CHAR_VALUE)                                          \
+	(POC_IS_CHAR_SIMD(CHAR_VALUE) && !(POC_IS_CONTROL_SIMD(CHAR_VALUE) ||  \
+					   POC_IS_SEPERATOR_SIMD(CHAR_VALUE)))
+#define POC_IS_TEXT_SIMD(CHAR_VALUE)                                           \
 	(!POC_IS_CONTROL_SIMD(CHAR_VALUE) || (CHAR_VALUE) == ' ' ||            \
 	 (CHAR_VALUE) == '\t')
 #define POC_SIMD_FOR_HTTP_VERSION 1
@@ -118,7 +119,7 @@ static void http_parse_request_simd(
     int *minor_version_num, poc_header_pair_simd *headers, size_t *num_header,
     char **message_body, size_t *message_body_size, bool *failed) {
 
-#define POC_INCREMENT_BUFFER_OFFSET_SIMD(OFFSET_LENGTH)                             \
+#define POC_INCREMENT_BUFFER_OFFSET_SIMD(OFFSET_LENGTH)                        \
 	do {                                                                   \
 		message_buffer += OFFSET_LENGTH;                               \
 		current_buffer_index += OFFSET_LENGTH;                         \

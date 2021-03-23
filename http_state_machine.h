@@ -82,7 +82,12 @@ typedef enum {
 	PARSING_DONE_sm
 } ParserState_sm;
 
-typedef enum { CR_sm = 0x0D, LF_sm = 0x0A, SP_sm = 0x20, HT_sm = 0x09 } LexConst_sm;
+typedef enum {
+	CR_sm = 0x0D,
+	LF_sm = 0x0A,
+	SP_sm = 0x20,
+	HT_sm = 0x09
+} LexConst_sm;
 
 typedef struct {
 	char header_name[HEADER_NAME_BUFFER_SIZE_SM];
@@ -203,7 +208,7 @@ static bool _poc_is_seperator_sm(char value) {
 	(POC_IS_CHAR_SM(CHAR_VALUE) &&                                         \
 	 !(POC_IS_CONTROL_SM(CHAR_VALUE) || _poc_is_seperator_sm(CHAR_VALUE)))
 #define POC_IS_TEXT_SM(CHAR_VALUE)                                             \
-	(!POC_IS_CONTROL_SM(CHAR_VALUE) || (CHAR_VALUE == (char)SP_sm) ||         \
+	(!POC_IS_CONTROL_SM(CHAR_VALUE) || (CHAR_VALUE == (char)SP_sm) ||      \
 	 (CHAR_VALUE == HT_sm))
 
 static bool poc_http_state_machine_parser_sm(
@@ -235,7 +240,7 @@ static bool poc_http_state_machine_parser_sm(
 		if (current_header_index >=                                    \
 		    HTTP_MESSAGE->http_headers->_total_headers_pairs)          \
 			return false;                                          \
-		if (current_header_name_index >= HEADER_NAME_BUFFER_SIZE_SM)      \
+		if (current_header_name_index >= HEADER_NAME_BUFFER_SIZE_SM)   \
 			return false;                                          \
 		HTTP_MESSAGE->http_headers                                     \
 		    ->http_header_pairs[current_header_index]                  \
@@ -259,7 +264,7 @@ static bool poc_http_state_machine_parser_sm(
 		if (current_header_index >=                                    \
 		    HTTP_MESSAGE->http_headers->_total_headers_pairs)          \
 			return false;                                          \
-		if (current_header_value_index >= HEADER_NAME_BUFFER_SIZE_SM)     \
+		if (current_header_value_index >= HEADER_NAME_BUFFER_SIZE_SM)  \
 			return false;                                          \
 		HTTP_MESSAGE->http_headers                                     \
 		    ->http_header_pairs[current_header_index]                  \
@@ -354,7 +359,8 @@ static bool poc_http_state_machine_parser_sm(
 			if (*input_buffer == '/') {
 				POC_APPEND_CHAR_MESSAGE_BUFFER_SM(
 				    http_message, http_version, '/');
-				*current_state = REQUEST_PROTOCOL_VERSION_MAJOR_sm;
+				*current_state =
+				    REQUEST_PROTOCOL_VERSION_MAJOR_sm;
 				input_buffer++;
 			} else {
 				*current_state = PROTOCOL_ERROR_sm;
@@ -368,7 +374,8 @@ static bool poc_http_state_machine_parser_sm(
 			} else if (*input_buffer == '.') {
 				POC_APPEND_CHAR_MESSAGE_BUFFER_SM(
 				    http_message, http_version, '.');
-				*current_state = REQUEST_PROTOCOL_VERSION_MINOR_sm;
+				*current_state =
+				    REQUEST_PROTOCOL_VERSION_MINOR_sm;
 				input_buffer++;
 			} else {
 				*current_state = PROTOCOL_ERROR_sm;
@@ -397,7 +404,7 @@ static bool poc_http_state_machine_parser_sm(
 		case HEADER_NAME_sm:
 			if (POC_IS_TOKEN_SM(*input_buffer)) {
 				POC_APPEND_CHAR_HEADER_NAME_SM(http_message,
-							    *input_buffer);
+							       *input_buffer);
 				input_buffer++;
 			} else if (*input_buffer == ':') {
 				*current_state = HEADER_VALUE_sm;
@@ -418,7 +425,7 @@ static bool poc_http_state_machine_parser_sm(
 				input_buffer++;
 			} else if (POC_IS_TEXT_SM(*input_buffer)) {
 				POC_APPEND_CHAR_HEADER_VALUE_SM(http_message,
-							     *input_buffer);
+								*input_buffer);
 				input_buffer++;
 			} else {
 				*current_state = PROTOCOL_ERROR_sm;
@@ -433,7 +440,8 @@ static bool poc_http_state_machine_parser_sm(
 			}
 			break;
 		case HEADER_VALUE_END_sm:
-			POC_INCREMENT_CURRENT_HEADER_PAIR_INDEX_SM(http_message);
+			POC_INCREMENT_CURRENT_HEADER_PAIR_INDEX_SM(
+			    http_message);
 			*current_state = HEADER_NAME_sm;
 			break;
 		case HEADER_END_LF_sm:

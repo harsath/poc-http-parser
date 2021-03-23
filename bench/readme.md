@@ -1,11 +1,18 @@
-### Benchmarks per-{commit, parsing-method}
+### Benchmarks
 All benchmarks are tested under CPU with spec in `cpu_spec.txt`.
-#### HTTP Zero Memory Allocation Parser:
-- At(Commit Hash): d2cc8aa972ae73a2781e6135d1cebc9f0ccf9c8b
-- Bench: 10000000 GET requests(see `./http_zero_mem_alloc_parser_bench.c`) in ~5.124441 seconds
-#### HTTP State Machine:
-- At(Commit Hash): 6c02a4f7e8a68dc49b3e760d2103e668f1cdbc1b
-- Bench: 10000000 GET requests(see `http_parser_state_machine_bench.c`) in ~15.009198 seconds
-#### HTTP Parsing(method two):
-- At(Commit Hash): 67a9fb03c28f6e7683815d894203a9d87d4e6b56
-- Bench: 10000000 GET requests(see `http_parser_meth_two_bench.c`) in ~15.259364 seconds
+```
+Run on (6 X 2592 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x6)
+  L1 Instruction 32 KiB (x6)
+  L2 Unified 256 KiB (x6)
+  L3 Unified 9216 KiB (x2)
+Load Average: 0.44, 0.19, 0.11
+----------------------------------------------------------------------------------------------------
+Benchmark                                                          Time             CPU   Iterations
+----------------------------------------------------------------------------------------------------
+Http_SIMD_SSE42_AVX2_Zero_Dynamic_Memory_Allocation_Parser      98.0 ns         98.0 ns      6966642
+Http_Zero_Dynamic_Memory_Allocation_Parser                       522 ns          522 ns      1371287
+Http_Parsing_Method_Two                                         1353 ns         1353 ns       516235
+Http_State_Machine_Parser                                       1393 ns         1393 ns       476815
+```

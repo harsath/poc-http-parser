@@ -32,7 +32,12 @@
 // NOTE: 'zm' suffix denotes 'Zero-Memory(allocation)', it's named that way to
 //       avoid collision in benchmarks/tests
 
-typedef enum { CR_zm = 0x0D, LF_zm = 0x0A, SP_zm = 0x20, HT_zm = 0x09 } LexConst_zm;
+typedef enum {
+	CR_zm = 0x0D,
+	LF_zm = 0x0A,
+	SP_zm = 0x20,
+	HT_zm = 0x09
+} LexConst_zm;
 
 typedef struct {
 	const char *header_name;
@@ -67,7 +72,7 @@ typedef struct {
 	(POC_IS_CHAR_ZM(CHAR_VALUE) &&                                         \
 	 !(POC_IS_CONTROL_ZM(CHAR_VALUE) || POC_IS_SEPERATOR_ZM(CHAR_VALUE)))
 #define POC_IS_TEXT_ZM(CHAR_VALUE)                                             \
-	(!POC_IS_CONTROL_ZM(CHAR_VALUE) || (CHAR_VALUE) == (char)SP_zm ||         \
+	(!POC_IS_CONTROL_ZM(CHAR_VALUE) || (CHAR_VALUE) == (char)SP_zm ||      \
 	 (CHAR_VALUE) == HT_zm)
 
 static void http_parse_request_zm(
@@ -96,8 +101,8 @@ static void http_parse_request_zm(
 	} while (0)
 #define POC_EXPECT_CRLF_ZM(MESSAGE_BUFFER)                                     \
 	do {                                                                   \
-		if (*MESSAGE_BUFFER != (char)CR_zm &&                             \
-		    *(MESSAGE_BUFFER + 1) != (char)LF_zm) {                       \
+		if (*MESSAGE_BUFFER != (char)CR_zm &&                          \
+		    *(MESSAGE_BUFFER + 1) != (char)LF_zm) {                    \
 			*failed = true;                                        \
 			return;                                                \
 		}                                                              \
