@@ -1,5 +1,5 @@
 ### Plain-Old-C HTTP parser
-![Linux Actions Status](https://github.com/harsath/poc-http-parser/workflows/Linux/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![macOS Actions Status](https://github.com/harsath/poc-http-parser/workflows/macOS/badge.svg) ![Linux Actions Status](https://github.com/harsath/poc-http-parser/workflows/Linux/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Originally implemented for my internal use to play around with Linux and FreeBSD's networking interface for event-driven
 APIs, but I find myself using it ofter.
