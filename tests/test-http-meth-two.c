@@ -10,16 +10,16 @@ void test_http_meth_two(void){
 						 "Cookie: some_inter_key=2; some_internal_value_php=LJldkfjalkasdfl;\r\n"
 						 "X-Powered-By: Proxygen/FB-CXX\r\n\r\n";
 		size_t sample_request_size = strlen(sample_get_request);
-		poc_Buffer* http_body = poc_allocate_http_buffer(2048);	
-		poc_Header* http_header = poc_allocate_http_header(10);
-		poc_HTTP_Version http_version;
-		poc_HTTP_Method http_method;
+		poc_Buffer_mt* http_body = poc_allocate_http_buffer_mt(2048);	
+		poc_Header_mt* http_header = poc_allocate_http_header_mt(10);
+		poc_HTTP_Version_mt http_version;
+		poc_HTTP_Method_mt http_method;
 		char* request_resource = calloc(sizeof(char), 1000);
-		poc_Parser_Error http_parser_error;
-		bool return_parser = poc_http_parser(http_body, http_header, sample_get_request, sample_request_size,
+		poc_Parser_Error_mt http_parser_error;
+		bool return_parser = poc_http_parser_mt(http_body, http_header, sample_get_request, sample_request_size,
 				&http_method, request_resource, &http_version, &http_parser_error);
 		POC_ASSERT_TRUE(return_parser, "Meth-2 Parser's return value");
-		POC_ASSERT_TRUE(http_method == POC_HTTP_GET, "Meth-2 HTTP Method");
+		POC_ASSERT_TRUE(http_method == POC_HTTP_GET_mt, "Meth-2 HTTP Method");
 		POC_ASSERT_TRUE(memcmp(request_resource, "/some_page.php", strlen("some_page.php")) == 0, "Meth-2 HTTP Request Res");
 		POC_ASSERT_TRUE(http_version == HTTP_1_1, "Meth-2 HTTP Version");
 		POC_ASSERT_TRUE(memcmp(http_header->http_header_pairs[0].header_name, "Host", strlen("Host")) == 0,
@@ -47,8 +47,8 @@ void test_http_meth_two(void){
 		POC_ASSERT_TRUE(memcmp(http_header->http_header_pairs[4].header_value, "Proxygen/FB-CXX", 
 					strlen("Proxygen/FB-CXX")) == 0, "Meth-2 HTTP Header value 4");
 		POC_ASSERT_TRUE(http_header->current_index == 5, "Meth-3 internal current_index check");
-		poc_free_http_header(http_header);
-		poc_free_buffer(http_body);
+		poc_free_http_header_mt(http_header);
+		poc_free_buffer_mt(http_body);
 		free(request_resource);
 	}
 
@@ -60,16 +60,16 @@ void test_http_meth_two(void){
 						  "Content-Length: 35\r\n\r\n"
 						  "key_one=value_one&key_two=value_two";
 		size_t sample_request_size = strlen(sample_post_request);
-		poc_Buffer* http_body = poc_allocate_http_buffer(2048);	
-		poc_Header* http_header = poc_allocate_http_header(10);
-		poc_HTTP_Version http_version;
-		poc_HTTP_Method http_method;
+		poc_Buffer_mt* http_body = poc_allocate_http_buffer_mt(2048);	
+		poc_Header_mt* http_header = poc_allocate_http_header_mt(10);
+		poc_HTTP_Version_mt http_version;
+		poc_HTTP_Method_mt http_method;
 		char* request_resource = calloc(sizeof(char), 1000);
-		poc_Parser_Error http_parser_error;
-		bool return_parser = poc_http_parser(http_body, http_header, sample_post_request, sample_request_size,
+		poc_Parser_Error_mt http_parser_error;
+		bool return_parser = poc_http_parser_mt(http_body, http_header, sample_post_request, sample_request_size,
 				&http_method, request_resource, &http_version, &http_parser_error);
 		POC_ASSERT_TRUE(return_parser, "Meth-2 POST HTTP parser return");
-		POC_ASSERT_TRUE(http_method == POC_HTTP_POST, "Meth-2 POST HTTP Method");
+		POC_ASSERT_TRUE(http_method == POC_HTTP_POST_mt, "Meth-2 POST HTTP Method");
 		POC_ASSERT_TRUE(memcmp(request_resource, "/some_endpoint", strlen("/some_endpoint")) == 0,
 				"Meth-2 POST HTTP request resource");
 		POC_ASSERT_TRUE(http_version == HTTP_1_1, "Meth-2 POST HTTP Version");
@@ -93,8 +93,8 @@ void test_http_meth_two(void){
 					strlen("key_one=value_one&key_two=value_two")) == 0, "Meth-2 POST HTTP message body");
 		POC_ASSERT_TRUE(http_body->current_index == strlen("key_one=value_one&key_two=value_two")-1, 
 				"Meth-2 POST HTTP body current_index");
-		poc_free_http_header(http_header);
-		poc_free_buffer(http_body);
+		poc_free_http_header_mt(http_header);
+		poc_free_buffer_mt(http_body);
 		free(request_resource);
 	}
 }

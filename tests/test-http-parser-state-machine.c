@@ -12,14 +12,14 @@ void test_http_state_machine(void){
 		size_t req_resource_buf_size = 1024;
 		size_t http_version_buf_size = 10;
 		size_t http_method_buf_size = 10;
-		poc_HTTP_Request_Message* http_request_message = 
-			poc_allocate_http_request_message(num_header, message_body_buf_size, req_resource_buf_size,
+		poc_HTTP_Request_Message_sm* http_request_message = 
+			poc_allocate_http_request_message_sm(num_header, message_body_buf_size, req_resource_buf_size,
 					http_version_buf_size, http_method_buf_size);
-		ParserState parser_state = REQUEST_LINE_BEGIN;
+		ParserState_sm parser_state = REQUEST_LINE_BEGIN_sm;
 		bool is_protocol_fail = false;
-		bool parser_return = poc_http_state_machine_parser(http_request_message, &parser_state, 
+		bool parser_return = poc_http_state_machine_parser_sm(http_request_message, &parser_state, 
 				sample_http_get_request, sample_http_get_request_size, &is_protocol_fail);
-		POC_ASSERT_TRUE(poc_str3cmp(http_request_message->http_method->buffer, (unsigned char*)"GET") && !is_protocol_fail,
+		POC_ASSERT_TRUE(poc_str3cmp_sm(http_request_message->http_method->buffer, (unsigned char*)"GET") && !is_protocol_fail,
 					"GET method");
 		POC_ASSERT_TRUE(memcmp((char*)http_request_message->http_request_resource->buffer, "/index.php", strlen("/index.php")) == 0,
 					"GET request resource");
@@ -33,8 +33,8 @@ void test_http_state_machine(void){
 					"www.foo.com", strlen("www.foo.com")) == 0, "GET http header value 0");
 		POC_ASSERT_TRUE(memcmp((char*)http_request_message->http_headers->http_header_pairs[1].header_value,
 					"curl/19.2", strlen("curl/19.2")) == 0, "GET http header value 1");
-		POC_ASSERT_TRUE(parser_state == PARSING_DONE, "GET parser state");
-		poc_free_http_request_message(http_request_message);
+		POC_ASSERT_TRUE(parser_state == PARSING_DONE_sm, "GET parser state");
+		poc_free_http_request_message_sm(http_request_message);
 	}
 
 	{ // POST Request parsing
@@ -50,14 +50,14 @@ void test_http_state_machine(void){
 		size_t req_resource_buf_size = 1024;
 		size_t http_version_buf_size = 10;
 		size_t http_method_buf_size = 10;
-		poc_HTTP_Request_Message* http_request_message_post = 
-			poc_allocate_http_request_message(num_header, message_body_buf_size, req_resource_buf_size,
+		poc_HTTP_Request_Message_sm* http_request_message_post = 
+			poc_allocate_http_request_message_sm(num_header, message_body_buf_size, req_resource_buf_size,
 					http_version_buf_size, http_method_buf_size);
-		ParserState parser_state_post = REQUEST_LINE_BEGIN;
+		ParserState_sm parser_state_post = REQUEST_LINE_BEGIN_sm;
 		bool is_protocol_fail = false;
-		bool parser_return = poc_http_state_machine_parser(http_request_message_post, &parser_state_post, 
+		bool parser_return = poc_http_state_machine_parser_sm(http_request_message_post, &parser_state_post, 
 				sample_http_post_request, sample_http_post_request_size, &is_protocol_fail);
-		POC_ASSERT_TRUE(poc_str3cmp(http_request_message_post->http_method->buffer, (unsigned char*)"POST") && !is_protocol_fail,
+		POC_ASSERT_TRUE(poc_str3cmp_sm(http_request_message_post->http_method->buffer, (unsigned char*)"POST") && !is_protocol_fail,
 					"POST method");
 		POC_ASSERT_TRUE(memcmp((char*)http_request_message_post->http_request_resource->buffer, "/index.php",
 					strlen("/index.php")) == 0, "POST request resource");
@@ -82,7 +82,7 @@ void test_http_state_machine(void){
 					"35", strlen("35")) == 0, "POST header value 3");
 		POC_ASSERT_TRUE(memcmp((char*)http_request_message_post->http_message_body->buffer,
 					"key_one=value_one&key_two=value_two", strlen("key_one=value_one&key_two=value_two")) == 0, "POST body");
-		POC_ASSERT_EQ(parser_state_post, PARSING_DONE, "POST parser state");
-		poc_free_http_request_message(http_request_message_post);
+		POC_ASSERT_EQ(parser_state_post, PARSING_DONE_sm, "POST parser state");
+		poc_free_http_request_message_sm(http_request_message_post);
 	}
 }

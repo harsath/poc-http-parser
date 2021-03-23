@@ -14,13 +14,13 @@ void test_zero_mem_alloc(void){
 		size_t request_resource_len = 0;
 		int http_version_minor;
 		int http_version_major;
-		poc_header_pair header_pair[total_header];			
-		POC_INIT_HEADER_PAIR_TO_ZERO(header_pair, total_header);
+		poc_header_pair_zm header_pair[total_header];			
+		POC_INIT_HEADER_PAIR_TO_ZERO_ZM(header_pair, total_header);
 		size_t num_header = 0;
 		char* http_message_body = NULL;
 		size_t http_message_body_len = 0;
 		bool is_failed;
-		http_parse_request(sample_http_get_request, sample_http_get_request_size, &request_method, &request_method_len, &request_resource,
+		http_parse_request_zm(sample_http_get_request, sample_http_get_request_size, &request_method, &request_method_len, &request_resource,
 				   &request_resource_len, &http_version_major, &http_version_minor, header_pair, &num_header, &http_message_body,
 				   &http_message_body_len, &is_failed);
 		POC_ASSERT_TRUE(memcmp(request_method, "GET", request_method_len) == 0, "ZERO_ALLOC request_method cmp");
@@ -57,13 +57,13 @@ void test_zero_mem_alloc(void){
 		size_t request_resource_len = 0;
 		int http_version_minor;
 		int http_version_major;
-		poc_header_pair header_pair[total_header];			
-		POC_INIT_HEADER_PAIR_TO_ZERO(header_pair, total_header);
+		poc_header_pair_zm header_pair[total_header];			
+		POC_INIT_HEADER_PAIR_TO_ZERO_ZM(header_pair, total_header);
 		size_t num_header = 0;
 		char* http_message_body = NULL;
 		size_t http_message_body_len = 0;
 		bool is_failed;
-		http_parse_request(sample_post_request, sample_request_size, &request_method, &request_method_len, &request_resource,
+		http_parse_request_zm(sample_post_request, sample_request_size, &request_method, &request_method_len, &request_resource,
 				   &request_resource_len, &http_version_major, &http_version_minor, header_pair, &num_header, &http_message_body,
 				   &http_message_body_len, &is_failed);
 		POC_ASSERT_TRUE(memcmp(request_method, "POST", request_method_len) == 0, "ZERO_ALLOC POST request method");
