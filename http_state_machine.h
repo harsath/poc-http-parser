@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 // NOTE: 'sm' suffix referes to 'State-Machine', it's named that way due to name
 // 	 collision in benchmarks/tests
 
@@ -115,7 +116,14 @@ typedef struct {
 	poc_Buffer_sm *http_method;
 	poc_Buffer_sm *http_message_body;
 } poc_HTTP_Request_Message_sm;
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
+/**
+ * Allocates a poc_Header_sm object for storing parsed HTTP message' headers
+ *
+ * @param num_header Pre-defined size of headers
+ * @return Dynamically allocated poc_Header_sm object.
+ */
 static poc_Header_sm *poc_allocate_http_header_sm(size_t num_header) {
 	poc_Header_sm *http_header =
 	    (poc_Header_sm *)POC_ALLOCATOR_SM(1, sizeof(poc_Header_sm));
@@ -125,6 +133,12 @@ static poc_Header_sm *poc_allocate_http_header_sm(size_t num_header) {
 	return http_header;
 }
 
+/**
+ * Allocates a poc_Buffer_sm object for storing parsed data from HTTP message.
+ *
+ * @param buffer_size Size of the poc_Buffer_sm to allocate
+ * @return Dynamically allocated poc_Buffer_sm object.
+ */
 static poc_Buffer_sm *poc_allocate_buffer_sm(size_t buffer_size) {
 	poc_Buffer_sm *buffer =
 	    (poc_Buffer_sm *)POC_ALLOCATOR_SM(1, sizeof(poc_Buffer_sm));
@@ -134,6 +148,21 @@ static poc_Buffer_sm *poc_allocate_buffer_sm(size_t buffer_size) {
 	return buffer;
 }
 
+/**
+ * Allocate a poc_HTTP_Request_Message_sm for storing a parsed version of
+ * HTTP 1.x message representation
+ *
+ * @param num_header Pre-define size of headers
+ * @param message_body_buffer_size Pre-define size of HTTP 1.x message's message
+ * body size in bytes
+ * @param request_resource_buffer_Size Size of HTTP 1.x request message's
+ * request-resource size.
+ * @param http_version_buffer_size Buffer size for storing HTTP message's
+ * version
+ * @param http_method_buffer_size Buffer size for storing HTTP message's method.
+ * @return Dynamically allocated poc_HTTP_Request_Message_sm for representing a
+ * HTTP 1.x request message
+ */
 static poc_HTTP_Request_Message_sm *poc_allocate_http_request_message_sm(
     size_t num_header, size_t message_body_buffer_size,
     size_t request_resource_buffer_Size, size_t http_version_buffer_size,
@@ -154,16 +183,31 @@ static poc_HTTP_Request_Message_sm *poc_allocate_http_request_message_sm(
 	return http_request_message;
 }
 
+/**
+ * Frees a poc_Buffer_sm previously allocated through the helper function
+ *
+ * @param buffer poc_Buffer_sm object to be freed.
+ */
 static void poc_free_buffer_sm(poc_Buffer_sm *buffer) {
 	free(buffer->buffer);
 	free(buffer);
 }
 
+/**
+ * Frees the HTTP header object, poc_Header_sm
+ *
+ * @param http_header poc_Header_sm object to be freed
+ */
 static void poc_free_header_sm(poc_Header_sm *http_header) {
 	free(http_header->http_header_pairs);
 	free(http_header);
 }
 
+/**
+ * Free a whole poc_HTTP_Request_Message_sm object
+ *
+ * @param http_message Object to free.
+ */
 static void
 poc_free_http_request_message_sm(poc_HTTP_Request_Message_sm *http_message) {
 	poc_free_buffer_sm(http_message->http_message_body);
@@ -174,6 +218,7 @@ poc_free_http_request_message_sm(poc_HTTP_Request_Message_sm *http_message) {
 	free(http_message);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 static bool _poc_is_seperator_sm(char value) {
 	switch (value) {
 	case '(':
@@ -210,10 +255,26 @@ static bool _poc_is_seperator_sm(char value) {
 #define POC_IS_TEXT_SM(CHAR_VALUE)                                             \
 	(!POC_IS_CONTROL_SM(CHAR_VALUE) || (CHAR_VALUE == (char)SP_sm) ||      \
 	 (CHAR_VALUE == HT_sm))
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
+/**
+ * State machine parser for parsing HTTP 1.x Request-Message
+ *
+ * @param http_message poc_HTTP_Request_Message_sm object buffer for storing the
+ * parsed HTTP message bytes.
+ * @param current_state Current state of the HTTP state-machine(will be updated
+ * as we incrementally parse)
+ * @param input_buffer Raw HTTP request bytes for parsing read through wire
+ * @param buffer_size Size of the raw bytes
+ * @param is_protocol_failur Boolean indicator if the HTTP request bytes does
+ * not follow HTTP 1.x protocol specification
+ * @return True if state-machine parsed the raw bytes successfully, if not
+ * returns False.
+ */
 static bool poc_http_state_machine_parser_sm(
     poc_HTTP_Request_Message_sm *http_message, ParserState_sm *current_state,
     const char *input_buffer, size_t buffer_size, bool *is_protocol_failur) {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define POC_APPEND_CHAR_MESSAGE_BUFFER_SM(HTTP_MESSAGE, BUFFER_TYPE,           \
 					  CHAR_VALUE)                          \
 	do {                                                                   \
@@ -276,7 +337,7 @@ static bool poc_http_state_machine_parser_sm(
 
 #define POC_INCREMENT_CURRENT_HEADER_PAIR_INDEX_SM(HTTP_MESSAGE)               \
 	HTTP_MESSAGE->http_headers->_current_header_index++
-
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 	const char *buffer_end = &input_buffer[buffer_size];
 	while (input_buffer != buffer_end) {
 		switch (*current_state) {

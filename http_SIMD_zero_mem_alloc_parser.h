@@ -34,6 +34,7 @@
 // NOTE: 'simd' suffix denotes the 'SIMD' implementation, it's named this way to
 // avoid collision in benchmarks/tests
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define str5cmp_macro_simd(ptr, c0, c1, c2, c3, c4)                            \
 	*(ptr + 0) == c0 &&*(ptr + 1) == c1 &&*(ptr + 2) == c2 &&*(ptr + 3) == \
 	    c3 &&*(ptr + 4) == c4
@@ -49,10 +50,19 @@ typedef struct {
 	const char *header_value;
 	size_t header_value_len;
 } poc_header_pair_simd;
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
 // clang-format off
 // Very useful/fast helpers. AVX2 256-bit version if processor supports AVX2
 // #if defined(__AVX__)
+/**
+ * AVX2 vectorized first occurance of a char finder within a buffer through 256-bits at once
+ *
+ * @param buffer_start Start of a buffer within which to find a char
+ * @param buffer_end End of the raw buffer
+ * @param find Char value to find within the buffer with AVX2 vectorized implementation
+ * @return Pointer within the buffer where it finds first occurance of the char, If it cannot find one, it points to buffer_end
+ */
 static char *fast_find_char_avx2(char *buffer_start, char *buffer_end, char find){
 	__m256i char_fill = _mm256_set1_epi8(find);
 	for(; buffer_start+32 < buffer_end; buffer_start += 32){
@@ -63,10 +73,18 @@ static char *fast_find_char_avx2(char *buffer_start, char *buffer_end, char find
 	}
 	for(; buffer_start < buffer_end; ++buffer_start)
 		if(*buffer_start == find) return buffer_start;
-	return buffer_start;
+	return buffer_end;
 }
 // or else, use SSE4.2 128-bit version as fallback
 // #elif defined(__SSE4_2__)
+/**
+ * SSE 4.2 vectorized char finder witin a buffer through 128-bits at once
+ *
+ * @param buffer_start Start of a buffer
+ * @param buffer_end End of a buffer (usually, buffer_start + size-of-raw-buffer)
+ * @param find First occurance of char value to find within the buffer(buffer_start - buffer_end)
+ * @return Pointer within the buffer where it finds first occurance of the char, if it cannot find one, it points to buffer_end.
+ */
 static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char find){
 	__m128i char_fill = _mm_set1_epi8(find);
 	for(; buffer_start+16 < buffer_end; buffer_start += 16){
@@ -77,11 +95,12 @@ static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char fi
 	}
 	for(; buffer_start < buffer_end; ++buffer_start)
 		if(*buffer_start == find) return buffer_start;
-	return buffer_start;
+	return buffer_end;
 }
 // #endif
 // clang-format on
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define POC_INIT_HEADER_PAIR_TO_ZERO_SIMD(header_pair_ptr, pair_size)          \
 	do {                                                                   \
 		for (size_t i = 0; i < pair_size; i++) {                       \
@@ -111,7 +130,25 @@ static char *fast_find_char_sse4_2(char *buffer_start, char *buffer_end, char fi
 	(!POC_IS_CONTROL_SIMD(CHAR_VALUE) || (CHAR_VALUE) == ' ' ||            \
 	 (CHAR_VALUE) == '\t')
 #define POC_SIMD_FOR_HTTP_VERSION 1
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
+/**
+ * Parse a HTTP 1.x raw buffer read from wire very fast with Zero memory allocation
+ *
+ * @param message_buffer Pointer to start of the HTTP 1.x raw buffer read from wire.
+ * @param message_buffer_size Size of the pointer i.e raw buffer
+ * @param request_method Double Pointer which points to the start of request-method within the HTTP 1.x raw buffer
+ * @param request_method_len Size of the pointer which points to within the buffer
+ * @param request_resource Double pointer which points to the start of request-resource within the HTTP 1.x raw buffer
+ * @param request_resource_len Size of the pointer which points to start of request-resource within the buffer
+ * @param major_version_num Pointer to store int version of parsed HTTP message's major version.
+ * @param minor_version_num Pointer to store int version of parsed HTTP message's minor version.
+ * @param headers Pointer to array of structure which holds pointer to start and size of HTTP headers within the HTTP 1.x raw message.
+ * @param num_header Total number of headers parsed by the SIMD parser within the given raw HTTP 1.x message
+ * @param message_body Double pointer which points to start of the message body within the raw HTTP buffer
+ * @param message_body_size Size of the message body/pointe pointed by the message_body.
+ * @param failed Boolean flag to indicate a parser failur(if True) or else, it's set to False if parsed successfully
+ */
 static void http_parse_request_simd(
     char *message_buffer, size_t message_buffer_size, char **request_method,
     size_t *request_method_len, char **request_resource,
@@ -119,6 +156,7 @@ static void http_parse_request_simd(
     int *minor_version_num, poc_header_pair_simd *headers, size_t *num_header,
     char **message_body, size_t *message_body_size, bool *failed) {
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define POC_INCREMENT_BUFFER_OFFSET_SIMD(OFFSET_LENGTH)                        \
 	do {                                                                   \
 		message_buffer += OFFSET_LENGTH;                               \
@@ -128,6 +166,7 @@ static void http_parse_request_simd(
 			return;                                                \
 		}                                                              \
 	} while (0)
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
 	// parsing HTTP request method
 	size_t current_buffer_index = 0;

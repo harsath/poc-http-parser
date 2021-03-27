@@ -32,6 +32,7 @@
 // NOTE: 'zm' suffix denotes 'Zero-Memory(allocation)', it's named that way to
 //       avoid collision in benchmarks/tests
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 typedef enum {
 	CR_zm = 0x0D,
 	LF_zm = 0x0A,
@@ -74,7 +75,25 @@ typedef struct {
 #define POC_IS_TEXT_ZM(CHAR_VALUE)                                             \
 	(!POC_IS_CONTROL_ZM(CHAR_VALUE) || (CHAR_VALUE) == (char)SP_zm ||      \
 	 (CHAR_VALUE) == HT_zm)
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
+/**
+ * Parse a HTTP 1.x Request-Message with Zero dynamic memory allocation
+ *
+ * @param message_buffer Raw HTTP requet bytes read from wire.
+ * @param message_buffer_size Size of the input bytes
+ * @param request_method Pointer to store the start of request-method
+ * @param request_method_len Size of the pointer which holds request-method within the message buffer.
+ * @param request_resource Pointer to store the start of request-resource
+ * @param request_resource_len Size of the pointer which holds request-resouce within the message buffer.
+ * @param major_version_num Pointer to store the HTTP message's HTTP major version number as int
+ * @param minor_version_num Pointer to store the HTTP message's HTTP minor version number as int
+ * @param headers Buffer(which have pointer members) to point to HTTP headers within the message-buffer along with their size.
+ * @param num_header Total number of headers parsed in the raw HTTP request bytes
+ * @param message_body Pointer to start of the HTTP message's body
+ * @param message_body_size Size of the pointer which points to the message body within the HTTP request read buffer
+ * @param failed Boolean flag, True if parser failed to parse the raw bytes or else False.
+ */
 static void http_parse_request_zm(
     char *message_buffer, size_t message_buffer_size, char **request_method,
     size_t *request_method_len, char **request_resource,
@@ -82,6 +101,7 @@ static void http_parse_request_zm(
     int *minor_version_num, poc_header_pair_zm *headers, size_t *num_header,
     char **message_body, size_t *message_body_size, bool *failed) {
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define POC_INCREMENT_BUFFER_OFFSET_ZM(OFFSET_LENGTH)                          \
 	do {                                                                   \
 		message_buffer += OFFSET_LENGTH;                               \
@@ -109,6 +129,7 @@ static void http_parse_request_zm(
 		POC_INCREMENT_BUFFER_OFFSET_ZM(2);                             \
 	} while (0)
 #define POC_GET_INT_FROM_CHAR_ZM(CHAR_VALUE) (CHAR_VALUE - '0')
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
 	// parsing HTTP request method
 	size_t current_buffer_index = 0;

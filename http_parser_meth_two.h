@@ -29,6 +29,7 @@
 // NOTE: 'mt' suffix 'Method-two' it's named that way due to name collision in
 //       benchmarks/tests
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define HEADER_NAME_BUFFER_SIZE_MT 1024
 #define HEADER_VALUE_BUFFER_SIZE_MT 1024
 #define POC_ALLOCATOR_MT(type, num_of_elements)                                \
@@ -108,7 +109,14 @@ typedef struct {
 	size_t total_memory;
 	size_t current_index;
 } poc_Buffer_mt;
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
+/**
+ * Allocate a poc_Buffer_mt object
+ *
+ * @param buffer_size Size of the buffer to be allocated
+ * @return Dynamically allocated poc_Buffer_mt object.
+ */
 static poc_Buffer_mt *poc_allocate_http_buffer_mt(size_t buffer_size) {
 	poc_Buffer_mt *http_buffer =
 	    (poc_Buffer_mt *)POC_ALLOCATOR_MT(poc_Buffer_mt, 1);
@@ -119,6 +127,12 @@ static poc_Buffer_mt *poc_allocate_http_buffer_mt(size_t buffer_size) {
 	return http_buffer;
 }
 
+/**
+ * Allocate poc_Header_mt object for HTTP header parsing
+ *
+ * @param number_of_headers Pre-defined size of headers(must not overflow)
+ * @return Dynamically allocated poc_Header_mt object.
+ */
 static poc_Header_mt *poc_allocate_http_header_mt(size_t number_of_headers) {
 	poc_Header_mt *http_header =
 	    (poc_Header_mt *)POC_ALLOCATOR_MT(poc_Header_mt, 1);
@@ -138,16 +152,27 @@ static poc_Header_mt *poc_allocate_http_header_mt(size_t number_of_headers) {
 	return http_header;
 }
 
+/**
+ * Free a poc_Buffer_mt object, previously allocated through helper function
+ *
+ * @param buffer Takes a poc_Buffer_mt object to be freed
+ */
 static void poc_free_buffer_mt(poc_Buffer_mt *buffer) {
 	free(buffer->buffer);
 	free(buffer);
 }
 
+/**
+ * Frees poc_Header_mt object, previously allocated through helper function
+ *
+ * @param http_header Takes poc_Header_mt object to be freed
+ */
 static void poc_free_http_header_mt(poc_Header_mt *http_header) {
 	free(http_header->http_header_pairs);
 	free(http_header);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define POC_IS_SEPERATOR_MT(CHAR_VALUE)                                        \
 	((CHAR_VALUE == '(') || (CHAR_VALUE == ')') || (CHAR_VALUE == '<') ||  \
 	 (CHAR_VALUE == '>') || (CHAR_VALUE == '@') || (CHAR_VALUE == ',') ||  \
@@ -167,7 +192,24 @@ static void poc_free_http_header_mt(poc_Header_mt *http_header) {
 #define POC_IS_TEXT_MT(CHAR_VALUE)                                             \
 	(!POC_IS_CONTROL_MT(CHAR_VALUE) || (CHAR_VALUE) == (char)SP_mt ||      \
 	 (CHAR_VALUE) == HT_mt)
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
+/**
+ * Parse a HTTP 1.x Request-Message
+ *
+ * @param http_body Buffer for storing parsed HTTP message's body
+ * @param http_header Buffer for storing parsed HTTP message's headers
+ * @param raw_input_buffer Raw HTTP request message bytes read from the wire
+ * @param input_buffer_size Size of the raw HTTP request message bytes
+ * @param http_method Buffer for string parsed HTTP message's request method
+ * @param request_resource Buffer for storing parsed HTTP Message's request
+ * resource
+ * @param http_version Buffer for storing parsed HTTP message's request HTTP
+ * version
+ * @param http_parser_error If parser failed to parse the given HTTP request
+ * message, the error code will be stored in here.
+ * @return True if parsed successfully else, returns False.
+ */
 static bool
 poc_http_parser_mt(poc_Buffer_mt *http_body, poc_Header_mt *http_header,
 		   const char *raw_input_buffer, size_t input_buffer_size,
@@ -175,6 +217,7 @@ poc_http_parser_mt(poc_Buffer_mt *http_body, poc_Header_mt *http_header,
 		   poc_HTTP_Version_mt *http_version,
 		   poc_Parser_Error_mt *http_parser_error) {
 	size_t current_buffer_index = 0;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define POC_INCREMENT_BUFFER_OFFSET_MT(offset_length)                          \
 	raw_input_buffer += offset_length;                                     \
 	current_buffer_index += offset_length
@@ -281,6 +324,7 @@ poc_http_parser_mt(poc_Buffer_mt *http_body, poc_Header_mt *http_header,
 #define POC_PROTOCOL_ERROR_HANDLER_MT()                                        \
 	*http_parser_error = ERROR_PROTOCOL_ERROR_mt;                          \
 	return false
+#endif // !DOXYGEN_SHOULD_SKIP_THIS
 
 	CHECK_IF_GET_MT(raw_input_buffer);
 	CHECK_IF_POST_MT(raw_input_buffer);
