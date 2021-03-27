@@ -1,7 +1,7 @@
 #!/usr/bin/php
 <?php
 // poc-http-parser
-// Copyright © Harsath
+// Copyright © Harsath <harsath@tuta.io>
 // The software is licensed under the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining
