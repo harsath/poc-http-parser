@@ -5,4 +5,3 @@ Originally implemented for my internal use to play around with Linux and FreeBSD
 APIs, but I find myself using it ofter.
 It's a header-only C HTTP parser. You can just plug-in anywhere for testing. <br>
 <b>Documentation:</b> [http://docs.harsath.cc/poc-http-parser](http://docs.harsath.cc/poc-http-parser/files.html) <br>
-It's under active development.
